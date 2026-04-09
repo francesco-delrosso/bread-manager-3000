@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Piccolo Camping – Cornetti</title>
+<style>
+:root{--green:#1B5E3B;--green2:#2A7A52;--gold:#C8880A;
+  --cream:#FDFAF4;--lightg:#DCF0E4}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:#f0f4f0;color:#2a2a2a;padding:0 0 40px}
+
+/* Header */
+.hdr{background:var(--green);color:#fff;padding:14px 20px;
+  display:flex;align-items:center;justify-content:space-between;
+  box-shadow:0 2px 6px rgba(0,0,0,.2);gap:12px;flex-wrap:wrap}
+.hdr h1{font-size:1.1rem}
+.hdr-links{display:flex;gap:8px}
+.hdr a{color:#fff;font-size:.8rem;opacity:.8;text-decoration:none;
+  background:rgba(255,255,255,.15);padding:5px 10px;border-radius:6px;
+  white-space:nowrap}
+
+/* Date bar */
+.date-bar{background:#fff;padding:14px 20px;border-bottom:1px solid #dde;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.date-bar label{font-size:.8rem;font-weight:700;color:var(--green2)}
+.date-bar select{padding:7px 10px;border:1.5px solid #ccc;border-radius:7px;
+  font-size:.9rem;color:#333;cursor:pointer}
+.date-bar select:focus{border-color:var(--green);outline:none}
+.copy-btn{margin-left:auto;background:#25D366;color:#fff;padding:7px 16px;
+  border:none;border-radius:7px;font-size:.85rem;font-weight:600;
+  cursor:pointer;white-space:nowrap;transition:background .2s}
+.copy-btn:hover{background:#1ebe5a}
+.print-btn{background:#555;color:#fff;padding:7px 14px;border:none;
+  border-radius:7px;font-size:.82rem;font-weight:600;cursor:pointer}
+
+/* Totale generale */
+.grand-banner{margin:16px 16px 0;background:var(--green);color:#fff;
+  border-radius:12px;padding:18px 20px;
+  display:flex;align-items:center;justify-content:space-between}
+.grand-banner h2{font-size:.85rem;opacity:.85;font-weight:600}
+.grand-banner span{font-size:2.2rem;font-weight:800}
+
+/* Schede cornetti */
+.cards{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;
+  padding:16px}
+.card{background:#fff;border-radius:12px;padding:18px 16px;
+  box-shadow:0 1px 4px rgba(0,0,0,.08);text-align:center}
+.card-icon{font-size:2rem;margin-bottom:6px}
+.card-name{font-size:.78rem;color:#888;font-weight:600;
+  text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px}
+.card-qty{font-size:3rem;font-weight:800;color:var(--green);line-height:1}
+.card-zero .card-qty{color:#ccc}
+
+/* Tabella ordini */
+.table-wrap{margin:0 16px;background:#fff;border-radius:10px;overflow:hidden;
+  box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.table-title{padding:12px 16px;font-size:.85rem;font-weight:700;
+  color:var(--green);border-bottom:1px solid #eee;
+  display:flex;justify-content:space-between;align-items:center}
+.badge{background:var(--lightg);color:var(--green2);
+  font-size:.75rem;padding:3px 10px;border-radius:20px}
+table{width:100%;border-collapse:collapse;font-size:.85rem}
+thead tr{background:var(--lightg)}
+th{padding:10px 10px;text-align:left;font-size:.72rem;color:var(--green);
+  font-weight:700;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
+td{padding:10px 10px;border-bottom:1px solid #f4f4f4}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafff8}
+.td-num{text-align:center}
+.td-zero{color:#ddd}
+.totals-row td{background:var(--lightg);font-weight:700}
+.empty-msg{padding:32px;text-align:center;color:#aaa;font-size:.95rem}
+
+/* Print */
+@media print{
+  .date-bar,.hdr a,.no-print{display:none!important}
+  body{background:#fff}
+  .grand-banner{background:#1B5E3B!important;-webkit-print-color-adjust:exact}
+  .table-wrap,.cards{box-shadow:none}
+}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <h1>🥐 Piccolo Camping — Cornetti</h1>
+  <div class="hdr-links">
+    <a href="/manager/dashboard">← Dashboard</a>
+    <a href="/manager/logout">Esci</a>
+  </div>
+</div>
+
+<!-- Selettore data -->
+<div class="date-bar no-print">
+  <label>📅 Data consegna:</label>
+  <form method="GET" action="/manager/cornetti"
+        style="display:inline-flex;gap:8px;align-items:center">
+    <select name="date" onchange="this.form.submit()">
+      {% for d in dates %}
+      <option value="{{ d['delivery_date'] }}"
+        {% if d['delivery_date'] == selected_date %}selected{% endif %}>
+        {{ d['delivery_date'] }}
+      </option>
+      {% endfor %}
+      {% if not dates %}
+      <option value="{{ selected_date }}">{{ selected_date }} (nessun ordine)</option>
+      {% endif %}
+    </select>
+  </form>
+  <button class="copy-btn" id="btn_copia" onclick="copiaOrdine()">
+    📋 Copia per WhatsApp
+  </button>
+  <button class="print-btn no-print" onclick="window.print()">🖨 Stampa</button>
+</div>
+
+<!-- Totale generale -->
+<div class="grand-banner">
+  <h2>Cornetti totali da preparare<br>per il {{ selected_date }}</h2>
+  <span>{{ grand_total }}</span>
+</div>
+
+<!-- Schede per tipo -->
+<div class="cards">
+  <div class="card {% if totals.cornetto_vuoto == 0 %}card-zero{% endif %}">
+    <div class="card-icon">🥐</div>
+    <div class="card-name">Vuoto</div>
+    <div class="card-qty">{{ totals.cornetto_vuoto }}</div>
+  </div>
+  <div class="card {% if totals.cornetto_marmellata == 0 %}card-zero{% endif %}">
+    <div class="card-icon">🍓</div>
+    <div class="card-name">Marmellata</div>
+    <div class="card-qty">{{ totals.cornetto_marmellata }}</div>
+  </div>
+  <div class="card {% if totals.cornetto_cioccolato == 0 %}card-zero{% endif %}">
+    <div class="card-icon">🍫</div>
+    <div class="card-name">Cioccolato</div>
+    <div class="card-qty">{{ totals.cornetto_cioccolato }}</div>
+  </div>
+  <div class="card {% if totals.cornetto_crema == 0 %}card-zero{% endif %}">
+    <div class="card-icon">🍮</div>
+    <div class="card-name">Crema</div>
+    <div class="card-qty">{{ totals.cornetto_crema }}</div>
+  </div>
+</div>
+
+<!-- Tabella dettaglio per piazzola -->
+<div class="table-wrap">
+  <div class="table-title">
+    <span>📋 Dettaglio per piazzola</span>
+    <span class="badge">{{ orders|length }} ordini</span>
+  </div>
+  {% if orders %}
+  <div style="overflow-x:auto">
+  <table>
+    <thead>
+      <tr>
+        <th>Cognome</th>
+        <th>Piazzola</th>
+        <th title="Cornetto vuoto">🥐 Vuoto</th>
+        <th title="Cornetto marmellata">🍓 Marm.</th>
+        <th title="Cornetto cioccolato">🍫 Cioc.</th>
+        <th title="Cornetto crema">🍮 Crema</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for o in orders %}
+      {% set row_total = o['cornetto_vuoto'] + o['cornetto_marmellata'] + o['cornetto_cioccolato'] + o['cornetto_crema'] %}
+      {% if row_total > 0 %}
+      <tr>
+        <td><strong>{{ o['customer_name'] }}</strong></td>
+        <td class="td-num">{{ o['pitch_number'] }}</td>
+        <td class="td-num {% if not o['cornetto_vuoto'] %}td-zero{% endif %}">
+          {{ o['cornetto_vuoto'] if o['cornetto_vuoto'] else '–' }}
+        </td>
+        <td class="td-num {% if not o['cornetto_marmellata'] %}td-zero{% endif %}">
+          {{ o['cornetto_marmellata'] if o['cornetto_marmellata'] else '–' }}
+        </td>
+        <td class="td-num {% if not o['cornetto_cioccolato'] %}td-zero{% endif %}">
+          {{ o['cornetto_cioccolato'] if o['cornetto_cioccolato'] else '–' }}
+        </td>
+        <td class="td-num {% if not o['cornetto_crema'] %}td-zero{% endif %}">
+          {{ o['cornetto_crema'] if o['cornetto_crema'] else '–' }}
+        </td>
+      </tr>
+      {% endif %}
+      {% endfor %}
+      <!-- Riga totali -->
+      <tr class="totals-row">
+        <td colspan="2" style="color:var(--green);font-size:.8rem">TOTALE</td>
+        <td class="td-num">{{ totals.cornetto_vuoto }}</td>
+        <td class="td-num">{{ totals.cornetto_marmellata }}</td>
+        <td class="td-num">{{ totals.cornetto_cioccolato }}</td>
+        <td class="td-num">{{ totals.cornetto_crema }}</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <div class="empty-msg">
+    📭 Nessun ordine con cornetti per il {{ selected_date }}
+  </div>
+  {% endif %}
+</div>
+
+<script>
+function copiaOrdine() {
+  const totals = {
+    vuoto:       {{ totals.cornetto_vuoto }},
+    marmellata:  {{ totals.cornetto_marmellata }},
+    cioccolato:  {{ totals.cornetto_cioccolato }},
+    crema:       {{ totals.cornetto_crema }}
+  };
+  const nomi = {
+    vuoto: 'Cornetti vuoti', marmellata: 'Cornetti marmellata',
+    cioccolato: 'Cornetti cioccolato', crema: 'Cornetti crema'
+  };
+  const righe = Object.entries(nomi)
+    .filter(([k]) => totals[k] > 0)
+    .map(([k, n]) => `- ${totals[k]} ${n}`);
+
+  if (!righe.length) {
+    alert('Nessun cornetto da preparare per questa data.');
+    return;
+  }
+
+  const testo =
+    `Ciao! Cornetti da preparare per il {{ selected_date }}:\n` +
+    righe.join('\n') +
+    `\nTotale: {{ grand_total }} cornetti\nGrazie!`;
+
+  navigator.clipboard.writeText(testo).then(() => {
+    const btn = document.getElementById('btn_copia');
+    const orig = btn.textContent;
+    btn.textContent = '✅ Copiato! Ora incollalo su WhatsApp';
+    btn.style.background = '#1B5E3B';
+    setTimeout(() => { btn.textContent = orig; btn.style.background = ''; }, 3000);
+  }).catch(() => alert('Impossibile copiare. Riprova.'));
+}
+</script>
+
+</body>
+</html>

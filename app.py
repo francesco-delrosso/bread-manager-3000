@@ -214,6 +214,34 @@ def manager_export():
     resp.headers['Content-Type'] = 'text/csv; charset=utf-8'
     return resp
 
+@app.route('/manager/cornetti')
+def manager_cornetti():
+    if not session.get('mgr'):
+        return redirect(url_for('manager_login'))
+
+    today = datetime.now().strftime('%Y-%m-%d')
+
+    with get_db() as conn:
+        dates = conn.execute(
+            'SELECT DISTINCT delivery_date FROM orders ORDER BY delivery_date DESC'
+        ).fetchall()
+
+        sel = request.args.get('date') or (dates[0]['delivery_date'] if dates else today)
+
+        orders = conn.execute(
+            'SELECT * FROM orders WHERE delivery_date=? ORDER BY created_at',
+            (sel,)).fetchall()
+
+    cornetti_keys = ['cornetto_vuoto', 'cornetto_marmellata', 'cornetto_cioccolato', 'cornetto_crema']
+    totals = {k: sum(o[k] for o in orders) for k in cornetti_keys}
+    grand  = sum(totals.values())
+
+    return render_template('cornetti.html',
+                           orders=orders, dates=dates,
+                           selected_date=sel,
+                           totals=totals,
+                           grand_total=grand)
+
 @app.route('/manager/edit/<int:order_id>', methods=['POST'])
 def manager_edit(order_id):
     if not session.get('mgr'):
@@ -247,7 +275,46 @@ def manager_logout():
     session.pop('mgr', None)
     return redirect(url_for('manager_login'))
 
+# ── Seed ─────────────────────────────────────────────────────────────
+def seed_db():
+    """Inserisce ordini di prova solo se il database è vuoto."""
+    with get_db() as conn:
+        if conn.execute('SELECT COUNT(*) FROM orders').fetchone()[0] > 0:
+            return  # dati già presenti, non sovrascrivere
+
+        now = datetime.now()
+        d1  = (now + timedelta(days=1)).strftime('%Y-%m-%d')  # domani
+        d2  = (now + timedelta(days=2)).strftime('%Y-%m-%d')  # dopodomani
+        d3  = (now + timedelta(days=3)).strftime('%Y-%m-%d')  # +3 giorni
+
+        INSERT = '''INSERT INTO orders
+            (delivery_date, customer_name, pitch_number,
+             francesino, grano_duro, multicereale,
+             cornetto_vuoto, cornetto_marmellata,
+             cornetto_cioccolato, cornetto_crema, total_amount)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?)'''
+
+        sample = [
+            # (data, cognome, piazzola, fra, gd, mul, c_vuo, c_mar, c_cio, c_cre)
+            (d1, 'Müller',     '12',  2, 1, 0, 2, 0, 1, 0),
+            (d1, 'Schneider',  '7',   0, 0, 1, 0, 2, 0, 2),
+            (d1, 'Fischer',    '23',  3, 0, 0, 1, 1, 0, 0),
+            (d1, 'Weber',      '5',   1, 2, 0, 0, 0, 2, 1),
+            (d2, 'Bauer',      '18',  2, 0, 1, 3, 0, 0, 1),
+            (d2, 'Koch',       '3',   0, 1, 0, 0, 1, 1, 0),
+            (d2, 'Hoffmann',   '31',  4, 0, 0, 2, 2, 0, 0),
+            (d3, 'Schäfer',    '9',   1, 1, 1, 0, 0, 0, 3),
+            (d3, 'Zimmermann', '14',  0, 0, 2, 1, 0, 1, 1),
+        ]
+
+        for row in sample:
+            d, nome, piaz, fra, gd, mul, cvu, cma, cch, ccr = row
+            total = (fra*0.70 + gd*0.80 + mul*2.70 +
+                     cvu*1.60 + cma*1.60 + cch*1.60 + ccr*1.60)
+            conn.execute(INSERT, (d, nome, piaz, fra, gd, mul, cvu, cma, cch, ccr, total))
+
 # ── Run ───────────────────────────────────────────────────────────────
 if __name__ == '__main__':
     init_db()
+    seed_db()
     app.run(debug=False, host='0.0.0.0', port=8000)
