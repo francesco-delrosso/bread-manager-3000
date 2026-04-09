@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Piccolo Camping – Statistiche</title>
+<style>
+:root{--green:#1B5E3B;--green2:#2A7A52;--gold:#C8880A;
+  --cream:#FDFAF4;--lightg:#DCF0E4}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:#f0f4f0;color:#2a2a2a;padding:0 0 48px}
+
+/* Header */
+.hdr{background:var(--green);color:#fff;padding:14px 20px;
+  display:flex;align-items:center;justify-content:space-between;
+  box-shadow:0 2px 6px rgba(0,0,0,.2);gap:12px;flex-wrap:wrap}
+.hdr h1{font-size:1.1rem}
+.hdr-links{display:flex;gap:8px}
+.hdr a{color:#fff;font-size:.8rem;opacity:.8;text-decoration:none;
+  background:rgba(255,255,255,.15);padding:5px 10px;border-radius:6px;
+  white-space:nowrap}
+
+/* Section title */
+.section-title{padding:18px 20px 8px;font-size:.78rem;font-weight:700;
+  color:var(--green2);text-transform:uppercase;letter-spacing:.7px}
+
+/* Summary cards */
+.cards-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;
+  padding:0 16px 4px}
+.card{background:#fff;border-radius:12px;padding:16px;
+  box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.card-label{font-size:.72rem;color:#888;font-weight:600;
+  text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
+.card-value{font-size:1.9rem;font-weight:800;color:var(--green);line-height:1.1}
+.card-sub{font-size:.72rem;color:#aaa;margin-top:4px}
+.card-hi{background:var(--lightg);border:2px solid var(--green2)}
+
+/* Ranking prodotti */
+.ranking{background:#fff;margin:0 16px;border-radius:12px;
+  padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.rank-row{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.rank-row:last-child{margin-bottom:0}
+.rank-pos{font-size:.75rem;font-weight:800;color:#bbb;min-width:18px;
+  text-align:center}
+.rank-pos.top{color:var(--gold)}
+.rank-label{font-size:.85rem;min-width:175px}
+.rank-bar-wrap{flex:1;background:#f0f0f0;border-radius:20px;height:10px;overflow:hidden}
+.rank-bar{height:100%;background:var(--green2);border-radius:20px;
+  transition:width .6s ease}
+.rank-bar.gold{background:var(--gold)}
+.rank-qty{font-size:.85rem;font-weight:700;color:var(--green);
+  min-width:36px;text-align:right}
+
+/* Tabelle */
+.table-wrap{background:#fff;margin:0 16px;border-radius:12px;overflow:hidden;
+  box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.table-title{padding:12px 16px;font-size:.85rem;font-weight:700;
+  color:var(--green);border-bottom:1px solid #eee}
+table{width:100%;border-collapse:collapse;font-size:.83rem}
+thead tr{background:var(--lightg)}
+th{padding:9px 12px;text-align:left;font-size:.72rem;color:var(--green);
+  font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+td{padding:9px 12px;border-bottom:1px solid #f4f4f4}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafff8}
+.td-r{text-align:right}
+.td-c{text-align:center}
+.empty-msg{padding:28px;text-align:center;color:#aaa;font-size:.9rem}
+
+/* Mini bar nella tabella giorni */
+.day-bar-wrap{width:80px;background:#f0f0f0;border-radius:10px;
+  height:8px;display:inline-block;overflow:hidden;vertical-align:middle}
+.day-bar{height:100%;background:var(--green2);border-radius:10px}
+
+/* Print */
+@media print{
+  .hdr a{display:none!important}
+  body{background:#fff}
+  .table-wrap,.ranking,.card{box-shadow:none}
+}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <h1>📊 Piccolo Camping — Statistiche</h1>
+  <div class="hdr-links">
+    <a href="/manager/dashboard">← Dashboard</a>
+    <a href="/manager/logout">Esci</a>
+  </div>
+</div>
+
+{% if n_orders == 0 %}
+<div class="empty-msg" style="margin-top:40px;font-size:1rem">
+  📭 Nessun ordine ancora. Le statistiche appariranno dopo il primo ordine.
+</div>
+
+{% else %}
+
+<!-- ── Panoramica ── -->
+<div class="section-title">Panoramica generale</div>
+<div class="cards-grid">
+  <div class="card card-hi">
+    <div class="card-label">Incasso totale</div>
+    <div class="card-value">€ {{ "%.2f"|format(revenue) }}</div>
+    <div class="card-sub">su {{ n_days }} giorn{{ 'o' if n_days == 1 else 'i' }} con ordini</div>
+  </div>
+  <div class="card card-hi">
+    <div class="card-label">Ordini totali</div>
+    <div class="card-value">{{ n_orders }}</div>
+    <div class="card-sub">da {{ n_days }} giorn{{ 'o' if n_days == 1 else 'i' }} diversi</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Incasso medio / giorno</div>
+    <div class="card-value">€ {{ "%.2f"|format(avg_revenue) }}</div>
+    <div class="card-sub">per giorno di consegna</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Ordini medi / giorno</div>
+    <div class="card-value">{{ "%.1f"|format(avg_orders) }}</div>
+    <div class="card-sub">per giorno di consegna</div>
+  </div>
+</div>
+
+<!-- ── Ranking prodotti ── -->
+<div class="section-title">Prodotti più ordinati</div>
+<div class="ranking">
+  {% for key, label, qty in ranking %}
+  <div class="rank-row">
+    <span class="rank-pos {% if loop.index == 1 %}top{% endif %}">
+      {% if loop.index == 1 %}🥇{% elif loop.index == 2 %}🥈{% elif loop.index == 3 %}🥉{% else %}{{ loop.index }}{% endif %}
+    </span>
+    <span class="rank-label">{{ label }}</span>
+    <div class="rank-bar-wrap">
+      <div class="rank-bar {% if loop.index == 1 %}gold{% endif %}"
+           style="width:{{ (qty / max_qty * 100)|int }}%"></div>
+    </div>
+    <span class="rank-qty">{{ qty }}</span>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- ── Riepilogo settimanale ── -->
+{% if weeks %}
+<div class="section-title">Riepilogo settimanale</div>
+<div class="table-wrap">
+  <div class="table-title">📅 Ultime {{ weeks|length }} settimane</div>
+  <table>
+    <thead>
+      <tr>
+        <th>Settimana</th>
+        <th class="td-c">Ordini</th>
+        <th class="td-r">Incasso</th>
+        <th class="td-r">Media / ordine</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for w in weeks %}
+      <tr>
+        <td>{{ w['week'] }}</td>
+        <td class="td-c">{{ w['n_orders'] }}</td>
+        <td class="td-r">€ {{ "%.2f"|format(w['revenue']) }}</td>
+        <td class="td-r">€ {{ "%.2f"|format(w['revenue'] / w['n_orders']) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<!-- ── Dettaglio per giorno ── -->
+{% if days %}
+<div class="section-title">Dettaglio per giorno di consegna</div>
+<div class="table-wrap">
+  <div class="table-title">📆 Ultimi {{ days|length }} giorni con ordini</div>
+  {% set max_rev = namespace(val=0) %}
+  {% for d in days %}{% if d['revenue'] > max_rev.val %}{% set max_rev.val = d['revenue'] %}{% endif %}{% endfor %}
+  <table>
+    <thead>
+      <tr>
+        <th>Data</th>
+        <th class="td-c">Ordini</th>
+        <th class="td-r">Incasso</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for d in days %}
+      <tr>
+        <td>{{ d['delivery_date'] }}</td>
+        <td class="td-c">{{ d['n_orders'] }}</td>
+        <td class="td-r">€ {{ "%.2f"|format(d['revenue']) }}</td>
+        <td style="padding-right:14px">
+          <div class="day-bar-wrap">
+            <div class="day-bar"
+                 style="width:{{ (d['revenue'] / max_rev.val * 100)|int if max_rev.val > 0 else 0 }}%">
+            </div>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% endif %}{# end n_orders > 0 #}
+
+</body>
+</html>

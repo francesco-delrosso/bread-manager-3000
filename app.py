@@ -183,6 +183,85 @@ def manager_dashboard():
                            grand_total=grand,
                            prices=PRICES)
 
+@app.route('/manager/stats')
+def manager_stats():
+    if not session.get('mgr'):
+        return redirect(url_for('manager_login'))
+
+    with get_db() as conn:
+        # Totali generali
+        overview = conn.execute('''
+            SELECT COUNT(*)                       AS n_orders,
+                   COALESCE(SUM(total_amount), 0) AS revenue,
+                   COUNT(DISTINCT delivery_date)  AS n_days
+            FROM orders
+        ''').fetchone()
+
+        # Quantità per prodotto
+        prod = conn.execute('''
+            SELECT COALESCE(SUM(francesino),0),
+                   COALESCE(SUM(grano_duro),0),
+                   COALESCE(SUM(multicereale),0),
+                   COALESCE(SUM(cornetto_vuoto),0),
+                   COALESCE(SUM(cornetto_marmellata),0),
+                   COALESCE(SUM(cornetto_cioccolato),0),
+                   COALESCE(SUM(cornetto_crema),0)
+            FROM orders
+        ''').fetchone()
+
+        # Riepilogo settimanale (ultime 8 settimane)
+        weeks = conn.execute('''
+            SELECT strftime('%Y', delivery_date) || ' – Sett. ' ||
+                   CAST(strftime('%W', delivery_date) AS INTEGER) AS week,
+                   COUNT(*)            AS n_orders,
+                   SUM(total_amount)   AS revenue
+            FROM orders
+            GROUP BY strftime('%Y%W', delivery_date)
+            ORDER BY delivery_date DESC
+            LIMIT 8
+        ''').fetchall()
+
+        # Riepilogo per giorno (ultimi 30 giorni con ordini)
+        days = conn.execute('''
+            SELECT delivery_date,
+                   COUNT(*)          AS n_orders,
+                   SUM(total_amount) AS revenue
+            FROM orders
+            GROUP BY delivery_date
+            ORDER BY delivery_date DESC
+            LIMIT 30
+        ''').fetchall()
+
+    PROD_LABELS = [
+        ('francesino',          '🍞 Francesino'),
+        ('grano_duro',          '🌾 Grano duro'),
+        ('multicereale',        '🌱 Multicereale'),
+        ('cornetto_vuoto',      '🥐 Cornetto vuoto'),
+        ('cornetto_marmellata', '🍓 Cornetto marmellata'),
+        ('cornetto_cioccolato', '🍫 Cornetto cioccolato'),
+        ('cornetto_crema',      '🍮 Cornetto crema'),
+    ]
+    prod_totals = [(label, prod[i]) for i, (_, label) in enumerate(PROD_LABELS)]
+    prod_totals_named = list(zip([k for k, _ in PROD_LABELS], prod_totals))
+    # lista (chiave, etichetta, quantità) ordinata per quantità desc
+    ranking = sorted(
+        [(k, label, prod[i]) for i, (k, label) in enumerate(PROD_LABELS)],
+        key=lambda x: x[2], reverse=True
+    )
+    max_qty = ranking[0][2] if ranking and ranking[0][2] > 0 else 1
+
+    n_days = overview['n_days'] or 1  # evita divisione per zero
+    return render_template('stats.html',
+                           n_orders=overview['n_orders'],
+                           revenue=overview['revenue'],
+                           n_days=overview['n_days'],
+                           avg_revenue=overview['revenue'] / n_days,
+                           avg_orders=overview['n_orders'] / n_days,
+                           ranking=ranking,
+                           max_qty=max_qty,
+                           weeks=weeks,
+                           days=days)
+
 @app.route('/manager/export')
 def manager_export():
     if not session.get('mgr'):
@@ -269,6 +348,17 @@ def manager_delete(order_id):
     with get_db() as conn:
         conn.execute('DELETE FROM orders WHERE id = ?', (order_id,))
     return redirect(url_for('manager_dashboard'))
+
+@app.route('/manager/poll')
+def manager_poll():
+    if not session.get('mgr'):
+        return {'error': 'unauthorized'}, 401
+    date = request.args.get('date', datetime.now().strftime('%Y-%m-%d'))
+    with get_db() as conn:
+        count = conn.execute(
+            'SELECT COUNT(*) FROM orders WHERE delivery_date=?', (date,)
+        ).fetchone()[0]
+    return {'count': count}
 
 @app.route('/manager/logout')
 def manager_logout():
