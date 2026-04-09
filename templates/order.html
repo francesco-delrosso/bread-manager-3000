@@ -31,14 +31,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
   transition:background .15s}
 .lang-btn.active{background:var(--green);color:#fff}
 
-/* ── Cutoff banner ── */
-.cutoff-banner{background:var(--red);color:#fff;padding:12px 16px;
-  text-align:center;font-size:.9rem;line-height:1.5}
-.cutoff-banner strong{display:block;font-size:1.1rem;margin-bottom:4px}
-.countdown{background:#fff3cd;border-left:4px solid var(--gold);
-  padding:10px 16px;font-size:.85rem;color:#7a5600;margin:12px 16px 0}
-.countdown strong{font-size:1rem}
-
 /* ── Section ── */
 .section{background:#fff;margin:12px;border-radius:10px;
   box-shadow:0 1px 4px rgba(0,0,0,.08);overflow:hidden}
@@ -49,14 +41,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 /* ── Fields ── */
 .fields{padding:14px}
 .field{margin-bottom:14px}
+.field:last-child{margin-bottom:0}
 .field label{display:block;font-size:.78rem;color:var(--gray);
   font-weight:600;margin-bottom:4px}
-.field input{width:100%;padding:11px 12px;border:1.5px solid var(--border);
-  border-radius:8px;font-size:1rem;background:#fff;
-  transition:border-color .2s;-webkit-appearance:none}
-.field input:focus{border-color:var(--green);outline:none}
-.delivery-info{font-size:.8rem;color:var(--green2);padding:0 14px 12px;
-  font-weight:600}
+.field input,.field select{width:100%;padding:11px 12px;border:1.5px solid var(--border);
+  border-radius:8px;font-size:1rem;background:#fff;color:var(--text);
+  transition:border-color .2s;-webkit-appearance:none;appearance:none}
+.field input:focus,.field select:focus{border-color:var(--green);outline:none}
+.field select{cursor:pointer;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7' viewBox='0 0 12 7'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23666' stroke-width='1.8' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 14px center;
+  padding-right:36px}
 
 /* ── Products ── */
 .product-row{display:flex;align-items:center;padding:11px 14px;
@@ -124,32 +119,8 @@ footer a{color:var(--green2);text-decoration:none}
   <button class="lang-btn"       onclick="setLang('en')">🇬🇧 EN</button>
 </div>
 
-{% if closed %}
-<!-- Cutoff banner -->
-<div class="cutoff-banner">
-  <strong data-de="Bestellschluss erreicht" data-it="Ordinazioni chiuse"
-          data-en="Orders closed">Bestellschluss erreicht</strong>
-  <span data-de="Bestellungen sind bis 18:00 Uhr möglich. Nächste Bestellung ab morgen früh."
-        data-it="Le ordinazioni sono possibili fino alle 18:00. Riapre domani mattina."
-        data-en="Orders are accepted until 6:00 PM. Reopens tomorrow morning.">
-    Bestellungen sind bis 18:00 Uhr möglich. Nächste Bestellung ab morgen früh.
-  </span>
-</div>
-{% else %}
-
-{% if minutes_left <= 60 %}
-<div class="countdown">
-  <strong data-de="⏰ Noch {{ minutes_left }} Minuten bis Bestellschluss (18:00)!"
-          data-it="⏰ Ancora {{ minutes_left }} minuti alla chiusura ordini (18:00)!"
-          data-en="⏰ {{ minutes_left }} minutes left before orders close (6:00 PM)!">
-    ⏰ Noch {{ minutes_left }} Minuten bis Bestellschluss (18:00)!
-  </strong>
-</div>
-{% endif %}
-
 <!-- Order form -->
 <form method="POST" action="/submit" id="orderForm">
-<input type="hidden" name="delivery_date" value="{{ delivery_date }}">
 
 <!-- Customer info -->
 <div class="section">
@@ -170,12 +141,19 @@ footer a{color:var(--green2);text-decoration:none}
       <input type="text" name="pitch_number" required inputmode="text"
              placeholder="— " id="inp_pitch">
     </div>
-  </div>
-  <div class="delivery-info"
-       data-de="📅 Lieferung für: {{ delivery_date_fmt }}"
-       data-it="📅 Consegna per il: {{ delivery_date_fmt }}"
-       data-en="📅 Delivery for: {{ delivery_date_fmt }}">
-    📅 Lieferung für: {{ delivery_date_fmt }}
+    <div class="field">
+      <label data-de="Lieferdatum *" data-it="Data di consegna *" data-en="Delivery date *">
+        Lieferdatum *
+      </label>
+      <select name="delivery_date" id="sel_date" onchange="updateDeliveryNote()">
+        {% for d in available_dates %}
+        <option value="{{ d.value }}"
+                data-de="{{ d.de }}"
+                data-it="{{ d.it }}"
+                data-en="{{ d.en }}">{{ d.de }}</option>
+        {% endfor %}
+      </select>
+    </div>
   </div>
 </div>
 
@@ -304,15 +282,9 @@ footer a{color:var(--green2);text-decoration:none}
           data-de="Bestellung absenden" data-it="Invia ordinazione" data-en="Submit order">
     Bestellung absenden
   </button>
-  <p class="submit-note"
-     data-de="Abholung ab 8:00 Uhr an der Rezeption • Lieferung: {{ delivery_date_fmt }}"
-     data-it="Ritiro dalle 8:00 in Direzione • Consegna: {{ delivery_date_fmt }}"
-     data-en="Pick-up from 8:00 AM at Reception • Delivery: {{ delivery_date_fmt }}">
-    Abholung ab 8:00 Uhr an der Rezeption • Lieferung: {{ delivery_date_fmt }}
-  </p>
+  <p class="submit-note" id="delivery_note"></p>
 </div>
 </form>
-{% endif %}
 
 <footer>
   <a href="https://www.piccolocamping.com">www.piccolocamping.com</a><br>
@@ -350,11 +322,26 @@ function updateTotal(){
     btn.disabled = (t===0 || !name||!name.value.trim()||!pitch||!pitch.value.trim());
   }
 }
-// Recheck on input
 ['inp_name','inp_pitch'].forEach(id=>{
   const el=document.getElementById(id);
   if(el) el.addEventListener('input',updateTotal);
 });
+
+// ── Delivery note (aggiornata dinamicamente) ──────────────────────────
+const NOTE_PREFIX = {
+  de: 'Abholung ab 8:00 Uhr an der Rezeption — Lieferung: ',
+  it: 'Ritiro dalle 8:00 in Direzione — Consegna: ',
+  en: 'Pick-up from 8:00 AM at Reception — Delivery: '
+};
+function updateDeliveryNote(){
+  const sel = document.getElementById('sel_date');
+  const el  = document.getElementById('delivery_note');
+  if(!sel || !el) return;
+  const lang = document.documentElement.lang || 'de';
+  const opt  = sel.options[sel.selectedIndex];
+  const dateLabel = opt ? (opt.getAttribute('data-'+lang) || opt.textContent.trim()) : '';
+  el.textContent = (NOTE_PREFIX[lang] || NOTE_PREFIX.de) + dateLabel;
+}
 
 // ── Language switcher ─────────────────────────────────────────────────
 const LANGS = ['de','it','en'];
@@ -367,6 +354,7 @@ function setLang(lang){
   });
   document.documentElement.lang = lang;
   try{ localStorage.setItem('pc_lang',lang); }catch(e){}
+  updateDeliveryNote();
 }
 
 // Auto-detect language on load
@@ -377,14 +365,6 @@ function setLang(lang){
   const lang = saved || (nav.startsWith('it')?'it': nav.startsWith('de')?'de':'de');
   setLang(lang);
 })();
-
-// Auto-refresh when cutoff approaches (check every 30s)
-{% if not closed %}
-setInterval(function(){
-  const now = new Date();
-  if(now.getHours() >= {{ cutoff_hour }}){ location.reload(); }
-}, 30000);
-{% endif %}
 </script>
 </body>
 </html>

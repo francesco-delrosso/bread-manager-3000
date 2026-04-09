@@ -16,7 +16,7 @@ app.secret_key = os.environ.get('SECRET_KEY', 'piccolo_camping_secret_2024')
 # ── Configuration ────────────────────────────────────────────────────
 DB_PATH          = os.path.join(os.path.dirname(__file__), 'orders.db')
 MANAGER_PASSWORD = os.environ.get('MANAGER_PWD', 'camping2024')   # change this!
-CUTOFF_HOUR      = 18   # orders accepted until 18:00
+CUTOFF_HOUR      = 18   # prima delle 18:00 → domani disponibile; dopo → dopodomani
 
 PRICES = {
     'francesino':           0.70,
@@ -27,6 +27,10 @@ PRICES = {
     'cornetto_cioccolato':  1.60,
     'cornetto_crema':       1.60,
 }
+
+DAYS_DE = ['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag']
+DAYS_IT = ['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato','Domenica']
+DAYS_EN = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
 
 # ── Database ─────────────────────────────────────────────────────────
 def get_db():
@@ -53,45 +57,55 @@ def init_db():
         )''')
 
 # ── Helpers ───────────────────────────────────────────────────────────
-def delivery_date_for(now: datetime) -> str:
-    """Return the delivery date (always tomorrow's date)."""
-    return (now + timedelta(days=1)).strftime('%Y-%m-%d')
-
 def is_past_cutoff(now: datetime) -> bool:
     return now.hour >= CUTOFF_HOUR
 
-def minutes_to_cutoff(now: datetime) -> int:
-    cutoff = now.replace(hour=CUTOFF_HOUR, minute=0, second=0, microsecond=0)
-    delta = cutoff - now
-    return max(0, int(delta.total_seconds() // 60))
+def get_available_dates(now: datetime) -> list:
+    """Genera i prossimi 7 giorni consegnabili.
+
+    Prima delle 18:00 la prima data disponibile è domani (delta=1).
+    Dopo le 18:00 la prima data disponibile è dopodomani (delta=2).
+    """
+    start = 2 if is_past_cutoff(now) else 1
+    dates = []
+    for idx, delta in enumerate(range(start, start + 7)):
+        d   = (now + timedelta(days=delta)).date()
+        fmt = d.strftime('%d.%m.%Y')
+        wd  = d.weekday()   # 0=Lun … 6=Dom
+        if idx == 0 and delta == 1:
+            de = f'Morgen, {fmt}'
+            it = f'Domani, {fmt}'
+            en = f'Tomorrow, {fmt}'
+        elif idx == 0 and delta == 2:
+            de = f'Übermorgen, {fmt}'
+            it = f'Dopodomani, {fmt}'
+            en = f'Day after tomorrow, {fmt}'
+        else:
+            de = f'{DAYS_DE[wd]}, {fmt}'
+            it = f'{DAYS_IT[wd]}, {fmt}'
+            en = f'{DAYS_EN[wd]}, {fmt}'
+        dates.append({'value': d.strftime('%Y-%m-%d'), 'de': de, 'it': it, 'en': en})
+    return dates
 
 # ── Customer routes ───────────────────────────────────────────────────
 @app.route('/')
 def order_form():
-    now     = datetime.now()
-    closed  = is_past_cutoff(now)
-    minutes = minutes_to_cutoff(now)
-    deldate = delivery_date_for(now)
-    deldate_fmt = datetime.strptime(deldate, '%Y-%m-%d').strftime('%d.%m.%Y')
+    now = datetime.now()
     return render_template('order.html',
-                           closed=closed,
-                           minutes_left=minutes,
-                           delivery_date=deldate,
-                           delivery_date_fmt=deldate_fmt,
-                           prices=PRICES,
-                           cutoff_hour=CUTOFF_HOUR)
+                           available_dates=get_available_dates(now),
+                           prices=PRICES)
 
 @app.route('/submit', methods=['POST'])
 def submit_order():
     now = datetime.now()
-    if is_past_cutoff(now):
-        return redirect(url_for('order_form'))
 
     name  = request.form.get('customer_name', '').strip()
     pitch = request.form.get('pitch_number',  '').strip()
-    ddate = request.form.get('delivery_date', delivery_date_for(now))
+    ddate = request.form.get('delivery_date', '').strip()
 
-    if not name or not pitch:
+    # Validazione server-side: la data deve essere tra quelle attualmente valide
+    valid_dates = [d['value'] for d in get_available_dates(now)]
+    if not name or not pitch or ddate not in valid_dates:
         return redirect(url_for('order_form'))
 
     quantities = {k: max(0, int(request.form.get(k, 0) or 0)) for k in PRICES}
@@ -202,4 +216,4 @@ def manager_logout():
 # ── Run ───────────────────────────────────────────────────────────────
 if __name__ == '__main__':
     init_db()
-    app.run(debug=False, host='0.0.0.0', port=5000)
+    app.run(debug=False, host='0.0.0.0', port=8000)
