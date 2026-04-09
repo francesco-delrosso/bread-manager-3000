@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#1B5E3B">
+<title>Piccolo Camping – Bestellung / Ordine / Order</title>
+<style>
+:root{
+  --green:#1B5E3B; --green2:#2A7A52; --gold:#C8880A;
+  --cream:#FDFAF4; --lightg:#DCF0E4; --text:#2A2A2A;
+  --gray:#666; --border:#ccc; --red:#C0392B;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:var(--cream);color:var(--text);max-width:520px;margin:0 auto;
+  padding-bottom:40px}
+
+/* ── Header ── */
+.hdr{background:var(--green);color:#fff;padding:18px 16px 14px;text-align:center;
+  position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.hdr h1{font-size:1.3rem;letter-spacing:.5px}
+.hdr p{font-size:.75rem;opacity:.85;margin-top:3px}
+.hdr-gold{color:var(--gold);font-size:.8rem;margin-top:6px;font-weight:600}
+
+/* ── Language switcher ── */
+.lang-bar{display:flex;justify-content:center;gap:8px;padding:10px;
+  background:var(--lightg);border-bottom:1px solid #b2d8c2}
+.lang-btn{border:none;background:transparent;padding:6px 14px;border-radius:20px;
+  font-size:.85rem;cursor:pointer;font-weight:600;color:var(--green2);
+  transition:background .15s}
+.lang-btn.active{background:var(--green);color:#fff}
+
+/* ── Cutoff banner ── */
+.cutoff-banner{background:var(--red);color:#fff;padding:12px 16px;
+  text-align:center;font-size:.9rem;line-height:1.5}
+.cutoff-banner strong{display:block;font-size:1.1rem;margin-bottom:4px}
+.countdown{background:#fff3cd;border-left:4px solid var(--gold);
+  padding:10px 16px;font-size:.85rem;color:#7a5600;margin:12px 16px 0}
+.countdown strong{font-size:1rem}
+
+/* ── Section ── */
+.section{background:#fff;margin:12px;border-radius:10px;
+  box-shadow:0 1px 4px rgba(0,0,0,.08);overflow:hidden}
+.sec-title{background:var(--lightg);padding:10px 14px;font-size:.8rem;
+  font-weight:700;color:var(--green);text-transform:uppercase;
+  letter-spacing:.8px;border-bottom:1px solid #b2d8c2}
+
+/* ── Fields ── */
+.fields{padding:14px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:.78rem;color:var(--gray);
+  font-weight:600;margin-bottom:4px}
+.field input{width:100%;padding:11px 12px;border:1.5px solid var(--border);
+  border-radius:8px;font-size:1rem;background:#fff;
+  transition:border-color .2s;-webkit-appearance:none}
+.field input:focus{border-color:var(--green);outline:none}
+.delivery-info{font-size:.8rem;color:var(--green2);padding:0 14px 12px;
+  font-weight:600}
+
+/* ── Products ── */
+.product-row{display:flex;align-items:center;padding:11px 14px;
+  border-bottom:1px solid #f0f0f0;gap:10px}
+.product-row:last-child{border-bottom:none}
+.prod-name{flex:1}
+.prod-name strong{display:block;font-size:.9rem}
+.prod-name small{font-size:.72rem;color:var(--gray)}
+.prod-price{font-size:.8rem;color:var(--green2);font-weight:600;
+  min-width:42px;text-align:right}
+.qty-ctrl{display:flex;align-items:center;gap:6px}
+.qty-btn{width:34px;height:34px;border-radius:50%;border:2px solid var(--green2);
+  background:#fff;color:var(--green2);font-size:1.2rem;font-weight:700;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  line-height:1;-webkit-tap-highlight-color:transparent;
+  transition:background .15s,color .15s}
+.qty-btn:active{background:var(--green2);color:#fff}
+.qty-val{min-width:26px;text-align:center;font-size:1rem;font-weight:700}
+
+/* ── Section headers (pane/dolci) ── */
+.cat-hdr{padding:8px 14px;background:#f5f5f5;font-size:.75rem;
+  font-weight:700;color:var(--gray);text-transform:uppercase;
+  letter-spacing:.6px;border-top:1px solid #eee;border-bottom:1px solid #eee}
+
+/* ── Total ── */
+.total-bar{display:flex;justify-content:space-between;align-items:center;
+  padding:14px 16px;background:var(--lightg);
+  border-top:2px solid var(--green2)}
+.total-bar span{font-size:.85rem;color:var(--green);font-weight:600}
+.total-bar strong{font-size:1.3rem;color:var(--green);font-weight:800}
+
+/* ── Submit ── */
+.submit-wrap{padding:16px 12px}
+.btn-submit{width:100%;padding:16px;background:var(--green);color:#fff;
+  border:none;border-radius:10px;font-size:1.05rem;font-weight:700;
+  cursor:pointer;letter-spacing:.3px;transition:background .2s;
+  -webkit-tap-highlight-color:transparent}
+.btn-submit:active{background:var(--green2)}
+.btn-submit:disabled{background:#aaa;cursor:not-allowed}
+.submit-note{font-size:.75rem;color:var(--gray);text-align:center;
+  margin-top:8px;line-height:1.5}
+
+/* ── Footer ── */
+footer{text-align:center;padding:20px;font-size:.75rem;color:var(--gray)}
+footer a{color:var(--green2);text-decoration:none}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="hdr">
+  <h1>🏕 Piccolo Camping</h1>
+  <p>Lago di Como &nbsp;|&nbsp; Como, Italy</p>
+  <div class="hdr-gold" data-de="Brot &amp; Gebäck — täglich frisch"
+       data-it="Pane e Dolci — ogni giorno freschi"
+       data-en="Bread &amp; Pastries — fresh every day">
+    Brot &amp; Gebäck — täglich frisch
+  </div>
+</div>
+
+<!-- Language switcher -->
+<div class="lang-bar">
+  <button class="lang-btn active" onclick="setLang('de')">🇩🇪 DE</button>
+  <button class="lang-btn"       onclick="setLang('it')">🇮🇹 IT</button>
+  <button class="lang-btn"       onclick="setLang('en')">🇬🇧 EN</button>
+</div>
+
+{% if closed %}
+<!-- Cutoff banner -->
+<div class="cutoff-banner">
+  <strong data-de="Bestellschluss erreicht" data-it="Ordinazioni chiuse"
+          data-en="Orders closed">Bestellschluss erreicht</strong>
+  <span data-de="Bestellungen sind bis 18:00 Uhr möglich. Nächste Bestellung ab morgen früh."
+        data-it="Le ordinazioni sono possibili fino alle 18:00. Riapre domani mattina."
+        data-en="Orders are accepted until 6:00 PM. Reopens tomorrow morning.">
+    Bestellungen sind bis 18:00 Uhr möglich. Nächste Bestellung ab morgen früh.
+  </span>
+</div>
+{% else %}
+
+{% if minutes_left <= 60 %}
+<div class="countdown">
+  <strong data-de="⏰ Noch {{ minutes_left }} Minuten bis Bestellschluss (18:00)!"
+          data-it="⏰ Ancora {{ minutes_left }} minuti alla chiusura ordini (18:00)!"
+          data-en="⏰ {{ minutes_left }} minutes left before orders close (6:00 PM)!">
+    ⏰ Noch {{ minutes_left }} Minuten bis Bestellschluss (18:00)!
+  </strong>
+</div>
+{% endif %}
+
+<!-- Order form -->
+<form method="POST" action="/submit" id="orderForm">
+<input type="hidden" name="delivery_date" value="{{ delivery_date }}">
+
+<!-- Customer info -->
+<div class="section">
+  <div class="sec-title" data-de="Ihre Daten / Dati personali / Your details"
+       data-it="Dati personali" data-en="Your details">
+    Ihre Daten
+  </div>
+  <div class="fields">
+    <div class="field">
+      <label data-de="Nachname *" data-it="Cognome *" data-en="Last name *">Nachname *</label>
+      <input type="text" name="customer_name" required autocomplete="family-name"
+             placeholder="— " id="inp_name">
+    </div>
+    <div class="field">
+      <label data-de="Stellplatz Nr. *" data-it="Piazzola Nr. *" data-en="Pitch No. *">
+        Stellplatz Nr. *
+      </label>
+      <input type="text" name="pitch_number" required inputmode="text"
+             placeholder="— " id="inp_pitch">
+    </div>
+  </div>
+  <div class="delivery-info"
+       data-de="📅 Lieferung für: {{ delivery_date_fmt }}"
+       data-it="📅 Consegna per il: {{ delivery_date_fmt }}"
+       data-en="📅 Delivery for: {{ delivery_date_fmt }}">
+    📅 Lieferung für: {{ delivery_date_fmt }}
+  </div>
+</div>
+
+<!-- Products -->
+<div class="section">
+  <div class="sec-title" data-de="Ihre Bestellung" data-it="Il tuo ordine" data-en="Your order">
+    Ihre Bestellung
+  </div>
+
+  <!-- BREAD -->
+  <div class="cat-hdr" data-de="🍞 Brot" data-it="🍞 Pane" data-en="🍞 Bread">🍞 Brot</div>
+
+  <div class="product-row">
+    <div class="prod-name">
+      <strong data-de="Weizenbröt­chen" data-it="Francesino" data-en="White roll">Weizenbröt­chen</strong>
+      <small data-de="Francesino" data-it="Panino di grano tenero" data-en="Francesino">Francesino</small>
+    </div>
+    <div class="prod-price">€ 0.70</div>
+    <div class="qty-ctrl">
+      <button type="button" class="qty-btn" onclick="changeQty('francesino',-1)">−</button>
+      <span class="qty-val" id="qv_francesino">0</span>
+      <button type="button" class="qty-btn" onclick="changeQty('francesino',1)">+</button>
+      <input type="hidden" name="francesino" id="qi_francesino" value="0">
+    </div>
+  </div>
+
+  <div class="product-row">
+    <div class="prod-name">
+      <strong data-de="Hartweizenbröt­chen" data-it="Grano duro" data-en="Durum wheat loaf">Hartweizenbröt­chen</strong>
+      <small data-de="Pane di grano duro" data-it="Pane di semola" data-en="Durum wheat bread">Pane di grano duro</small>
+    </div>
+    <div class="prod-price">€ 0.80</div>
+    <div class="qty-ctrl">
+      <button type="button" class="qty-btn" onclick="changeQty('grano_duro',-1)">−</button>
+      <span class="qty-val" id="qv_grano_duro">0</span>
+      <button type="button" class="qty-btn" onclick="changeQty('grano_duro',1)">+</button>
+      <input type="hidden" name="grano_duro" id="qi_grano_duro" value="0">
+    </div>
+  </div>
+
+  <div class="product-row">
+    <div class="prod-name">
+      <strong data-de="Mehrkornbrot" data-it="Pane multicereale" data-en="Multigrain loaf">Mehrkornbrot</strong>
+      <small data-de="Pane multicereale" data-it="Con semi misti" data-en="Mixed seeds">Pane multicereale</small>
+    </div>
+    <div class="prod-price">€ 2.70</div>
+    <div class="qty-ctrl">
+      <button type="button" class="qty-btn" onclick="changeQty('multicereale',-1)">−</button>
+      <span class="qty-val" id="qv_multicereale">0</span>
+      <button type="button" class="qty-btn" onclick="changeQty('multicereale',1)">+</button>
+      <input type="hidden" name="multicereale" id="qi_multicereale" value="0">
+    </div>
+  </div>
+
+  <!-- PASTRIES -->
+  <div class="cat-hdr" data-de="🥐 Gebäck (Croissant)" data-it="🥐 Dolci (Cornetti)" data-en="🥐 Pastries (Croissants)">
+    🥐 Gebäck (Croissant)
+  </div>
+
+  <div class="product-row">
+    <div class="prod-name">
+      <strong data-de="Croissant pur" data-it="Cornetto vuoto" data-en="Plain croissant">Croissant pur</strong>
+      <small data-de="Cornetto vuoto" data-it="Senza ripieno" data-en="No filling">Cornetto vuoto</small>
+    </div>
+    <div class="prod-price">€ 1.60</div>
+    <div class="qty-ctrl">
+      <button type="button" class="qty-btn" onclick="changeQty('cornetto_vuoto',-1)">−</button>
+      <span class="qty-val" id="qv_cornetto_vuoto">0</span>
+      <button type="button" class="qty-btn" onclick="changeQty('cornetto_vuoto',1)">+</button>
+      <input type="hidden" name="cornetto_vuoto" id="qi_cornetto_vuoto" value="0">
+    </div>
+  </div>
+
+  <div class="product-row">
+    <div class="prod-name">
+      <strong data-de="Croissant Marmelade" data-it="Cornetto marmellata" data-en="Jam croissant">Croissant Marmelade</strong>
+      <small data-de="Cornetto marmellata" data-it="Ripieno di marmellata" data-en="Jam filled">Cornetto marmellata</small>
+    </div>
+    <div class="prod-price">€ 1.60</div>
+    <div class="qty-ctrl">
+      <button type="button" class="qty-btn" onclick="changeQty('cornetto_marmellata',-1)">−</button>
+      <span class="qty-val" id="qv_cornetto_marmellata">0</span>
+      <button type="button" class="qty-btn" onclick="changeQty('cornetto_marmellata',1)">+</button>
+      <input type="hidden" name="cornetto_marmellata" id="qi_cornetto_marmellata" value="0">
+    </div>
+  </div>
+
+  <div class="product-row">
+    <div class="prod-name">
+      <strong data-de="Croissant Schokolade" data-it="Cornetto cioccolato" data-en="Chocolate croissant">Croissant Schokolade</strong>
+      <small data-de="Cornetto cioccolato" data-it="Ripieno di cioccolato" data-en="Chocolate filled">Cornetto cioccolato</small>
+    </div>
+    <div class="prod-price">€ 1.60</div>
+    <div class="qty-ctrl">
+      <button type="button" class="qty-btn" onclick="changeQty('cornetto_cioccolato',-1)">−</button>
+      <span class="qty-val" id="qv_cornetto_cioccolato">0</span>
+      <button type="button" class="qty-btn" onclick="changeQty('cornetto_cioccolato',1)">+</button>
+      <input type="hidden" name="cornetto_cioccolato" id="qi_cornetto_cioccolato" value="0">
+    </div>
+  </div>
+
+  <div class="product-row">
+    <div class="prod-name">
+      <strong data-de="Croissant Creme" data-it="Cornetto crema" data-en="Cream croissant">Croissant Creme</strong>
+      <small data-de="Cornetto crema" data-it="Ripieno di crema" data-en="Custard cream filled">Cornetto crema</small>
+    </div>
+    <div class="prod-price">€ 1.60</div>
+    <div class="qty-ctrl">
+      <button type="button" class="qty-btn" onclick="changeQty('cornetto_crema',-1)">−</button>
+      <span class="qty-val" id="qv_cornetto_crema">0</span>
+      <button type="button" class="qty-btn" onclick="changeQty('cornetto_crema',1)">+</button>
+      <input type="hidden" name="cornetto_crema" id="qi_cornetto_crema" value="0">
+    </div>
+  </div>
+
+  <!-- Total -->
+  <div class="total-bar">
+    <span data-de="Gesamtbetrag" data-it="Totale ordine" data-en="Order total">Gesamtbetrag</span>
+    <strong id="total_display">€ 0.00</strong>
+  </div>
+</div>
+
+<!-- Submit -->
+<div class="submit-wrap">
+  <button type="submit" class="btn-submit" id="btn_submit" disabled
+          data-de="Bestellung absenden" data-it="Invia ordinazione" data-en="Submit order">
+    Bestellung absenden
+  </button>
+  <p class="submit-note"
+     data-de="Abholung ab 8:00 Uhr an der Rezeption • Lieferung: {{ delivery_date_fmt }}"
+     data-it="Ritiro dalle 8:00 in Direzione • Consegna: {{ delivery_date_fmt }}"
+     data-en="Pick-up from 8:00 AM at Reception • Delivery: {{ delivery_date_fmt }}">
+    Abholung ab 8:00 Uhr an der Rezeption • Lieferung: {{ delivery_date_fmt }}
+  </p>
+</div>
+</form>
+{% endif %}
+
+<footer>
+  <a href="https://www.piccolocamping.com">www.piccolocamping.com</a><br>
+  Piccolo Camping — Lago di Como
+</footer>
+
+<script>
+// ── Prices ───────────────────────────────────────────────────────────
+const PRICES = {
+  francesino:0.70, grano_duro:0.80, multicereale:2.70,
+  cornetto_vuoto:1.60, cornetto_marmellata:1.60,
+  cornetto_cioccolato:1.60, cornetto_crema:1.60
+};
+
+// ── Quantity controls ─────────────────────────────────────────────────
+function changeQty(key, delta){
+  const span = document.getElementById('qv_'+key);
+  const inp  = document.getElementById('qi_'+key);
+  let v = Math.max(0, parseInt(span.textContent||0) + delta);
+  span.textContent = v;
+  inp.value = v;
+  updateTotal();
+}
+function updateTotal(){
+  let t=0;
+  Object.keys(PRICES).forEach(k=>{
+    const el=document.getElementById('qi_'+k);
+    if(el) t += parseInt(el.value||0)*PRICES[k];
+  });
+  document.getElementById('total_display').textContent='€ '+t.toFixed(2);
+  const btn=document.getElementById('btn_submit');
+  if(btn){
+    const name=document.getElementById('inp_name');
+    const pitch=document.getElementById('inp_pitch');
+    btn.disabled = (t===0 || !name||!name.value.trim()||!pitch||!pitch.value.trim());
+  }
+}
+// Recheck on input
+['inp_name','inp_pitch'].forEach(id=>{
+  const el=document.getElementById(id);
+  if(el) el.addEventListener('input',updateTotal);
+});
+
+// ── Language switcher ─────────────────────────────────────────────────
+const LANGS = ['de','it','en'];
+function setLang(lang){
+  document.querySelectorAll('[data-'+lang+']').forEach(el=>{
+    el.textContent = el.getAttribute('data-'+lang);
+  });
+  document.querySelectorAll('.lang-btn').forEach((b,i)=>{
+    b.classList.toggle('active', LANGS[i]===lang);
+  });
+  document.documentElement.lang = lang;
+  try{ localStorage.setItem('pc_lang',lang); }catch(e){}
+}
+
+// Auto-detect language on load
+(function(){
+  let saved;
+  try{ saved = localStorage.getItem('pc_lang'); }catch(e){}
+  const nav = (navigator.language||'').toLowerCase();
+  const lang = saved || (nav.startsWith('it')?'it': nav.startsWith('de')?'de':'de');
+  setLang(lang);
+})();
+
+// Auto-refresh when cutoff approaches (check every 30s)
+{% if not closed %}
+setInterval(function(){
+  const now = new Date();
+  if(now.getHours() >= {{ cutoff_hour }}){ location.reload(); }
+}, 30000);
+{% endif %}
+</script>
+</body>
+</html>

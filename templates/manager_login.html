@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Piccolo Camping – Accesso Gestore</title>
+<style>
+:root{--green:#1B5E3B;--gold:#C8880A;--cream:#FDFAF4;--lightg:#DCF0E4}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:var(--cream);color:#2a2a2a;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;min-height:100vh;padding:20px}
+.card{background:#fff;border-radius:14px;box-shadow:0 4px 20px rgba(0,0,0,.1);
+  padding:32px 28px;width:100%;max-width:380px}
+.logo{text-align:center;margin-bottom:24px}
+.logo h1{color:var(--green);font-size:1.4rem}
+.logo p{color:#666;font-size:.85rem;margin-top:4px}
+.badge{background:var(--lightg);color:var(--green);font-size:.75rem;
+  font-weight:700;padding:4px 12px;border-radius:20px;
+  display:inline-block;margin-top:8px;letter-spacing:.5px}
+label{display:block;font-size:.8rem;font-weight:600;color:#555;margin-bottom:6px}
+input[type=password]{width:100%;padding:12px;border:1.5px solid #ccc;
+  border-radius:8px;font-size:1rem;margin-bottom:16px;
+  transition:border-color .2s}
+input[type=password]:focus{border-color:var(--green);outline:none}
+.error{background:#fde8e8;color:#c0392b;padding:10px 12px;border-radius:8px;
+  font-size:.85rem;margin-bottom:14px;border-left:4px solid #c0392b}
+.btn{width:100%;padding:14px;background:var(--green);color:#fff;
+  border:none;border-radius:8px;font-size:1rem;font-weight:700;cursor:pointer}
+.btn:hover{background:#2A7A52}
+footer{margin-top:24px;font-size:.75rem;color:#aaa;text-align:center}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <h1>🏕 Piccolo Camping</h1>
+    <p>Lago di Como</p>
+    <span class="badge">🔒 Area Gestore / Manager Area</span>
+  </div>
+  {% if error %}
+  <div class="error">⚠️ Password errata. Riprovare. / Falsches Passwort.</div>
+  {% endif %}
+  <form method="POST" action="/manager">
+    <label>Password</label>
+    <input type="password" name="password" autofocus placeholder="••••••••">
+    <button type="submit" class="btn">Accedi / Einloggen / Login</button>
+  </form>
+</div>
+<footer>Piccolo Camping © — Sistema Ordini Pane e Dolci</footer>
+</body>
+</html>

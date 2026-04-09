@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Piccolo Camping – Dashboard Ordini</title>
+<style>
+:root{--green:#1B5E3B;--green2:#2A7A52;--gold:#C8880A;
+  --cream:#FDFAF4;--lightg:#DCF0E4;--red:#C0392B}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:#f0f4f0;color:#2a2a2a;padding:0 0 40px}
+
+/* Header */
+.hdr{background:var(--green);color:#fff;padding:14px 20px;
+  display:flex;align-items:center;justify-content:space-between;
+  box-shadow:0 2px 6px rgba(0,0,0,.2)}
+.hdr h1{font-size:1.1rem}
+.hdr a{color:#fff;font-size:.8rem;opacity:.8;text-decoration:none;
+  background:rgba(255,255,255,.15);padding:5px 10px;border-radius:6px}
+
+/* Date selector */
+.date-bar{background:#fff;padding:14px 20px;border-bottom:1px solid #dde;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.date-bar label{font-size:.8rem;font-weight:700;color:var(--green2)}
+.date-bar select{padding:7px 10px;border:1.5px solid #ccc;border-radius:7px;
+  font-size:.9rem;color:#333;cursor:pointer}
+.date-bar select:focus{border-color:var(--green);outline:none}
+.export-btn{margin-left:auto;background:var(--green2);color:#fff;
+  padding:7px 14px;border:none;border-radius:7px;font-size:.82rem;
+  font-weight:600;cursor:pointer;text-decoration:none;display:inline-block}
+.print-btn{background:#555;color:#fff;padding:7px 14px;border:none;
+  border-radius:7px;font-size:.82rem;font-weight:600;cursor:pointer}
+
+/* Summary cards */
+.summary{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
+  gap:10px;padding:16px 20px}
+.sum-card{background:#fff;border-radius:10px;padding:12px 14px;
+  box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.sum-card h3{font-size:.7rem;color:#888;text-transform:uppercase;
+  letter-spacing:.5px;margin-bottom:4px}
+.sum-card p{font-size:1.4rem;font-weight:800;color:var(--green)}
+.sum-card small{font-size:.72rem;color:#aaa}
+.total-card{background:var(--lightg);border:2px solid var(--green2)}
+.total-card p{color:var(--green)}
+
+/* Orders table */
+.table-wrap{margin:0 16px;background:#fff;border-radius:10px;overflow:hidden;
+  box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.table-title{padding:12px 16px;font-size:.85rem;font-weight:700;
+  color:var(--green);border-bottom:1px solid #eee;
+  display:flex;justify-content:space-between;align-items:center}
+.badge-count{background:var(--lightg);color:var(--green2);
+  font-size:.75rem;padding:3px 10px;border-radius:20px}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+thead tr{background:var(--lightg)}
+th{padding:9px 8px;text-align:left;font-size:.72rem;color:var(--green);
+  font-weight:700;text-transform:uppercase;letter-spacing:.4px;
+  white-space:nowrap}
+td{padding:9px 8px;border-bottom:1px solid #f4f4f4}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafff8}
+.td-num{text-align:center}
+.td-eur{text-align:right;font-weight:600;color:var(--green2)}
+.td-time{color:#aaa;font-size:.72rem}
+.empty-msg{padding:28px;text-align:center;color:#aaa;font-size:.9rem}
+
+/* Print styles */
+@media print{
+  .hdr a,.date-bar,.export-btn,.print-btn{display:none!important}
+  body{background:#fff}
+  .table-wrap{box-shadow:none;margin:0}
+}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <h1>🏕 Piccolo Camping — Ordini Pane e Dolci</h1>
+  <a href="/manager/logout">Esci / Logout</a>
+</div>
+
+<!-- Date selector & actions -->
+<div class="date-bar">
+  <label>📅 Data consegna:</label>
+  <form method="GET" action="/manager/dashboard" style="display:inline-flex;gap:8px;align-items:center">
+    <select name="date" onchange="this.form.submit()">
+      {% for d in dates %}
+      <option value="{{ d['delivery_date'] }}"
+        {% if d['delivery_date'] == selected_date %}selected{% endif %}>
+        {{ d['delivery_date'] }}
+      </option>
+      {% endfor %}
+      {% if not dates %}
+      <option value="{{ selected_date }}">{{ selected_date }} (nessun ordine)</option>
+      {% endif %}
+    </select>
+  </form>
+  <a class="export-btn" href="/manager/export?date={{ selected_date }}">⬇ CSV</a>
+  <button class="print-btn" onclick="window.print()">🖨 Stampa</button>
+</div>
+
+<!-- Summary cards -->
+<div class="summary">
+  <div class="sum-card total-card">
+    <h3>Ordini totali</h3>
+    <p>{{ orders|length }}</p>
+    <small>per {{ selected_date }}</small>
+  </div>
+  <div class="sum-card total-card">
+    <h3>Incasso totale</h3>
+    <p>€ {{ "%.2f"|format(grand_total) }}</p>
+    <small>stimato</small>
+  </div>
+</div>
+
+<!-- Product totals -->
+<div class="summary" style="padding-top:0">
+  <div class="sum-card">
+    <h3>Weizenbröt. / Francesino</h3>
+    <p>{{ totals.francesino }}</p>
+    <small>× € 0.70</small>
+  </div>
+  <div class="sum-card">
+    <h3>Hartweizenbrötchen</h3>
+    <p>{{ totals.grano_duro }}</p>
+    <small>× € 0.80</small>
+  </div>
+  <div class="sum-card">
+    <h3>Mehrkornbrot</h3>
+    <p>{{ totals.multicereale }}</p>
+    <small>× € 2.70</small>
+  </div>
+  <div class="sum-card">
+    <h3>Croissant pur</h3>
+    <p>{{ totals.cornetto_vuoto }}</p>
+    <small>× € 1.60</small>
+  </div>
+  <div class="sum-card">
+    <h3>Croissant Marmelade</h3>
+    <p>{{ totals.cornetto_marmellata }}</p>
+    <small>× € 1.60</small>
+  </div>
+  <div class="sum-card">
+    <h3>Croissant Schoko</h3>
+    <p>{{ totals.cornetto_cioccolato }}</p>
+    <small>× € 1.60</small>
+  </div>
+  <div class="sum-card">
+    <h3>Croissant Creme</h3>
+    <p>{{ totals.cornetto_crema }}</p>
+    <small>× € 1.60</small>
+  </div>
+</div>
+
+<!-- Orders table -->
+<div class="table-wrap">
+  <div class="table-title">
+    <span>📋 Dettaglio ordini — {{ selected_date }}</span>
+    <span class="badge-count">{{ orders|length }} ordini</span>
+  </div>
+  {% if orders %}
+  <div style="overflow-x:auto">
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Ora</th>
+        <th>Cognome / Name</th>
+        <th>Piazzola</th>
+        <th title="Francesino">🍞 Fra.</th>
+        <th title="Grano Duro">GD</th>
+        <th title="Multicereale">Mul.</th>
+        <th title="Cornetto vuoto">C.pur</th>
+        <th title="Cornetto marmellata">C.Mar.</th>
+        <th title="Cornetto cioccolato">C.Sch.</th>
+        <th title="Cornetto crema">C.Cr.</th>
+        <th>€</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for o in orders %}
+      <tr>
+        <td class="td-num">{{ loop.index }}</td>
+        <td class="td-time">{{ o['created_at'][11:16] }}</td>
+        <td><strong>{{ o['customer_name'] }}</strong></td>
+        <td class="td-num">{{ o['pitch_number'] }}</td>
+        <td class="td-num">{% if o['francesino'] %}{{ o['francesino'] }}{% else %}–{% endif %}</td>
+        <td class="td-num">{% if o['grano_duro'] %}{{ o['grano_duro'] }}{% else %}–{% endif %}</td>
+        <td class="td-num">{% if o['multicereale'] %}{{ o['multicereale'] }}{% else %}–{% endif %}</td>
+        <td class="td-num">{% if o['cornetto_vuoto'] %}{{ o['cornetto_vuoto'] }}{% else %}–{% endif %}</td>
+        <td class="td-num">{% if o['cornetto_marmellata'] %}{{ o['cornetto_marmellata'] }}{% else %}–{% endif %}</td>
+        <td class="td-num">{% if o['cornetto_cioccolato'] %}{{ o['cornetto_cioccolato'] }}{% else %}–{% endif %}</td>
+        <td class="td-num">{% if o['cornetto_crema'] %}{{ o['cornetto_crema'] }}{% else %}–{% endif %}</td>
+        <td class="td-eur">{{ "%.2f"|format(o['total_amount']) }}</td>
+      </tr>
+      {% endfor %}
+      <!-- Totals row -->
+      <tr style="background:var(--lightg);font-weight:700">
+        <td colspan="4" style="padding:9px 8px;color:var(--green);font-size:.8rem">
+          TOTALE / GESAMT
+        </td>
+        <td class="td-num">{{ totals.francesino }}</td>
+        <td class="td-num">{{ totals.grano_duro }}</td>
+        <td class="td-num">{{ totals.multicereale }}</td>
+        <td class="td-num">{{ totals.cornetto_vuoto }}</td>
+        <td class="td-num">{{ totals.cornetto_marmellata }}</td>
+        <td class="td-num">{{ totals.cornetto_cioccolato }}</td>
+        <td class="td-num">{{ totals.cornetto_crema }}</td>
+        <td class="td-eur">{{ "%.2f"|format(grand_total) }}</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <div class="empty-msg">
+    📭 Nessun ordine ricevuto per il {{ selected_date }}
+  </div>
+  {% endif %}
+</div>
+
+</body>
+</html>
