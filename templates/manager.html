@@ -21,16 +21,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 
 /* Date selector */
 .date-bar{background:#fff;padding:14px 20px;border-bottom:1px solid #dde;
-  display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .date-bar label{font-size:.8rem;font-weight:700;color:var(--green2)}
 .date-bar select{padding:7px 10px;border:1.5px solid #ccc;border-radius:7px;
   font-size:.9rem;color:#333;cursor:pointer}
 .date-bar select:focus{border-color:var(--green);outline:none}
-.export-btn{margin-left:auto;background:var(--green2);color:#fff;
+.export-btn{background:var(--green2);color:#fff;
   padding:7px 14px;border:none;border-radius:7px;font-size:.82rem;
   font-weight:600;cursor:pointer;text-decoration:none;display:inline-block}
 .print-btn{background:#555;color:#fff;padding:7px 14px;border:none;
   border-radius:7px;font-size:.82rem;font-weight:600;cursor:pointer}
+.copy-btn{background:#25D366;color:#fff;padding:7px 14px;border:none;
+  border-radius:7px;font-size:.82rem;font-weight:600;cursor:pointer;
+  white-space:nowrap;transition:background .2s}
+.copy-btn:hover{background:#1ebe5a}
+.actions-group{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
 
 /* Summary cards */
 .summary{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
@@ -64,10 +69,43 @@ tr:hover td{background:#fafff8}
 .td-eur{text-align:right;font-weight:600;color:var(--green2)}
 .td-time{color:#aaa;font-size:.72rem}
 .empty-msg{padding:28px;text-align:center;color:#aaa;font-size:.9rem}
+.del-btn,.edit-btn{background:none;border:none;font-size:1rem;cursor:pointer;
+  padding:4px 7px;border-radius:6px;transition:background .15s;line-height:1}
+.del-btn:hover{background:#ffeeee}
+.edit-btn:hover{background:#e8f0fe}
+
+/* ── Modal ── */
+.modal-overlay{display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.55);z-index:200;
+  align-items:center;justify-content:center;padding:16px}
+.modal-overlay.open{display:flex}
+.modal-box{background:#fff;border-radius:14px;padding:24px;
+  width:100%;max-width:400px;
+  box-shadow:0 10px 40px rgba(0,0,0,.25);
+  max-height:90vh;overflow-y:auto}
+.modal-box h2{font-size:1rem;color:var(--green);margin-bottom:4px;font-weight:700}
+.modal-subtitle{font-size:.78rem;color:#888;margin-bottom:18px}
+.modal-section{font-size:.7rem;font-weight:700;color:var(--green2);
+  text-transform:uppercase;letter-spacing:.6px;
+  margin:14px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--lightg)}
+.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.modal-field label{display:block;font-size:.75rem;color:#666;
+  font-weight:600;margin-bottom:4px}
+.modal-field input[type=number]{width:100%;padding:9px 10px;
+  border:1.5px solid #ccc;border-radius:7px;
+  font-size:1rem;text-align:center;-moz-appearance:textfield}
+.modal-field input[type=number]::-webkit-inner-spin-button{opacity:1}
+.modal-field input[type=number]:focus{border-color:var(--green);outline:none}
+.modal-actions{display:flex;gap:10px;margin-top:20px}
+.btn-save{flex:1;padding:12px;background:var(--green);color:#fff;
+  border:none;border-radius:8px;font-size:.95rem;font-weight:700;cursor:pointer}
+.btn-save:active{background:var(--green2)}
+.btn-cancel{flex:1;padding:12px;background:#eee;color:#555;
+  border:none;border-radius:8px;font-size:.95rem;font-weight:600;cursor:pointer}
 
 /* Print styles */
 @media print{
-  .hdr a,.date-bar,.export-btn,.print-btn{display:none!important}
+  .hdr a,.date-bar,.no-print,.modal-overlay{display:none!important}
   body{background:#fff}
   .table-wrap{box-shadow:none;margin:0}
 }
@@ -81,7 +119,7 @@ tr:hover td{background:#fafff8}
 </div>
 
 <!-- Date selector & actions -->
-<div class="date-bar">
+<div class="date-bar no-print">
   <label>📅 Data consegna:</label>
   <form method="GET" action="/manager/dashboard" style="display:inline-flex;gap:8px;align-items:center">
     <select name="date" onchange="this.form.submit()">
@@ -96,8 +134,11 @@ tr:hover td{background:#fafff8}
       {% endif %}
     </select>
   </form>
-  <a class="export-btn" href="/manager/export?date={{ selected_date }}">⬇ CSV</a>
-  <button class="print-btn" onclick="window.print()">🖨 Stampa</button>
+  <div class="actions-group">
+    <button class="copy-btn" id="btn_copia" onclick="copiaOrdine()">📋 Copia Ordine Panettiere</button>
+    <a class="export-btn" href="/manager/export?date={{ selected_date }}">⬇ CSV</a>
+    <button class="print-btn" onclick="window.print()">🖨 Stampa</button>
+  </div>
 </div>
 
 <!-- Summary cards -->
@@ -176,6 +217,7 @@ tr:hover td{background:#fafff8}
         <th title="Cornetto cioccolato">C.Sch.</th>
         <th title="Cornetto crema">C.Cr.</th>
         <th>€</th>
+        <th class="no-print"></th>
       </tr>
     </thead>
     <tbody>
@@ -193,6 +235,27 @@ tr:hover td{background:#fafff8}
         <td class="td-num">{% if o['cornetto_cioccolato'] %}{{ o['cornetto_cioccolato'] }}{% else %}–{% endif %}</td>
         <td class="td-num">{% if o['cornetto_crema'] %}{{ o['cornetto_crema'] }}{% else %}–{% endif %}</td>
         <td class="td-eur">{{ "%.2f"|format(o['total_amount']) }}</td>
+        <td class="no-print" style="white-space:nowrap">
+          <button type="button" class="edit-btn"
+                  data-id="{{ o['id'] }}"
+                  data-name="{{ o['customer_name']|e }}"
+                  data-fra="{{ o['francesino'] }}"
+                  data-gd="{{ o['grano_duro'] }}"
+                  data-mul="{{ o['multicereale'] }}"
+                  data-cv="{{ o['cornetto_vuoto'] }}"
+                  data-cm="{{ o['cornetto_marmellata'] }}"
+                  data-cch="{{ o['cornetto_cioccolato'] }}"
+                  data-ccr="{{ o['cornetto_crema'] }}"
+                  onclick="apriModifica(this)">✏️</button>
+          <form method="POST" action="/manager/delete/{{ o['id'] }}" style="margin:0;display:inline">
+            <input type="hidden" name="date" value="{{ selected_date }}">
+            <button type="submit" class="del-btn"
+                    data-name="{{ o['customer_name']|e }}"
+                    onclick="return confirm('Vuoi davvero eliminare l\'ordine di ' + this.dataset.name + '?')">
+              🗑️
+            </button>
+          </form>
+        </td>
       </tr>
       {% endfor %}
       <!-- Totals row -->
@@ -208,6 +271,7 @@ tr:hover td{background:#fafff8}
         <td class="td-num">{{ totals.cornetto_cioccolato }}</td>
         <td class="td-num">{{ totals.cornetto_crema }}</td>
         <td class="td-eur">{{ "%.2f"|format(grand_total) }}</td>
+        <td class="no-print"></td>
       </tr>
     </tbody>
   </table>
@@ -218,6 +282,112 @@ tr:hover td{background:#fafff8}
   </div>
   {% endif %}
 </div>
+
+<!-- ── Modal modifica ordine ── -->
+<div class="modal-overlay" id="modal" onclick="if(event.target===this) chiudiModale()">
+  <div class="modal-box">
+    <h2>✏️ Modifica ordine</h2>
+    <p class="modal-subtitle" id="modal-subtitle"></p>
+    <form method="POST" id="modal-form">
+      <input type="hidden" name="date" value="{{ selected_date }}">
+
+      <div class="modal-section">🍞 Pane</div>
+      <div class="modal-grid">
+        <div class="modal-field">
+          <label>Francesino</label>
+          <input type="number" name="francesino" id="m_francesino" min="0" value="0">
+        </div>
+        <div class="modal-field">
+          <label>Grano duro</label>
+          <input type="number" name="grano_duro" id="m_grano_duro" min="0" value="0">
+        </div>
+        <div class="modal-field">
+          <label>Multicereale</label>
+          <input type="number" name="multicereale" id="m_multicereale" min="0" value="0">
+        </div>
+      </div>
+
+      <div class="modal-section">🥐 Cornetti</div>
+      <div class="modal-grid">
+        <div class="modal-field">
+          <label>Vuoto</label>
+          <input type="number" name="cornetto_vuoto" id="m_cornetto_vuoto" min="0" value="0">
+        </div>
+        <div class="modal-field">
+          <label>Marmellata</label>
+          <input type="number" name="cornetto_marmellata" id="m_cornetto_marmellata" min="0" value="0">
+        </div>
+        <div class="modal-field">
+          <label>Cioccolato</label>
+          <input type="number" name="cornetto_cioccolato" id="m_cornetto_cioccolato" min="0" value="0">
+        </div>
+        <div class="modal-field">
+          <label>Crema</label>
+          <input type="number" name="cornetto_crema" id="m_cornetto_crema" min="0" value="0">
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-cancel" onclick="chiudiModale()">Annulla</button>
+        <button type="submit" class="btn-save">💾 Salva Modifiche</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+const TOTALS = {
+  francesino:          {{ totals.francesino }},
+  grano_duro:          {{ totals.grano_duro }},
+  multicereale:        {{ totals.multicereale }},
+  cornetto_vuoto:      {{ totals.cornetto_vuoto }},
+  cornetto_marmellata: {{ totals.cornetto_marmellata }},
+  cornetto_cioccolato: {{ totals.cornetto_cioccolato }},
+  cornetto_crema:      {{ totals.cornetto_crema }}
+};
+const NOMI = {
+  francesino:   'Francesini',
+  grano_duro:   'Grano duro',
+  multicereale: 'Multicereale'
+};
+
+// ── Copia panettiere ──────────────────────────────────────────────────
+function copiaOrdine() {
+  const righe = Object.entries(NOMI)
+    .filter(([k]) => TOTALS[k] > 0)
+    .map(([k, nome]) => `- ${TOTALS[k]} ${nome}`);
+  if (!righe.length) { alert('Nessun ordine da copiare per questa data.'); return; }
+  const testo =
+    `Ciao! Ecco l'ordine del Piccolo Camping per il {{ selected_date }}:\n` +
+    righe.join('\n') + `\nGrazie!`;
+  navigator.clipboard.writeText(testo).then(() => {
+    const btn = document.getElementById('btn_copia');
+    const orig = btn.textContent;
+    btn.textContent = '✅ Copiato! Ora incollalo su WhatsApp';
+    btn.style.background = '#1B5E3B';
+    setTimeout(() => { btn.textContent = orig; btn.style.background = ''; }, 3000);
+  }).catch(() => alert('Impossibile copiare automaticamente. Riprova.'));
+}
+
+// ── Modal modifica ────────────────────────────────────────────────────
+function apriModifica(btn) {
+  const d = btn.dataset;
+  document.getElementById('modal-form').action          = '/manager/edit/' + d.id;
+  document.getElementById('modal-subtitle').textContent = 'Ordine di: ' + d.name;
+  document.getElementById('m_francesino').value         = d.fra;
+  document.getElementById('m_grano_duro').value         = d.gd;
+  document.getElementById('m_multicereale').value       = d.mul;
+  document.getElementById('m_cornetto_vuoto').value     = d.cv;
+  document.getElementById('m_cornetto_marmellata').value = d.cm;
+  document.getElementById('m_cornetto_cioccolato').value = d.cch;
+  document.getElementById('m_cornetto_crema').value     = d.ccr;
+  document.getElementById('modal').classList.add('open');
+}
+
+function chiudiModale() {
+  document.getElementById('modal').classList.remove('open');
+}
+</script>
 
 </body>
 </html>

@@ -10,6 +10,8 @@ import io
 from datetime import datetime, timedelta
 import os
 
+#TODO: Fare una lista di tutte le piazzole e fare un controllo se l'utente ne inserisce una valida e per evitare confusioni bisogna controllare anche duplicati.
+
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'piccolo_camping_secret_2024')
 
@@ -156,15 +158,19 @@ def manager_dashboard():
         return redirect(url_for('manager_login'))
 
     today = datetime.now().strftime('%Y-%m-%d')
-    sel   = request.args.get('date', today)
 
     with get_db() as conn:
-        orders = conn.execute(
-            'SELECT * FROM orders WHERE delivery_date=? ORDER BY created_at',
-            (sel,)).fetchall()
         dates = conn.execute(
             'SELECT DISTINCT delivery_date FROM orders ORDER BY delivery_date DESC'
         ).fetchall()
+
+        # Se non c'è ?date= nell'URL usa la prima data con ordini,
+        # altrimenti cade su oggi (DB vuoto).
+        sel = request.args.get('date') or (dates[0]['delivery_date'] if dates else today)
+
+        orders = conn.execute(
+            'SELECT * FROM orders WHERE delivery_date=? ORDER BY created_at',
+            (sel,)).fetchall()
 
     # totals per product
     totals = {k: sum(o[k] for o in orders) for k in PRICES}
@@ -207,6 +213,34 @@ def manager_export():
     resp.headers['Content-Disposition'] = f'attachment; filename=ordini_{sel}.csv'
     resp.headers['Content-Type'] = 'text/csv; charset=utf-8'
     return resp
+
+@app.route('/manager/edit/<int:order_id>', methods=['POST'])
+def manager_edit(order_id):
+    if not session.get('mgr'):
+        return redirect(url_for('manager_login'))
+    date = request.form.get('date', datetime.now().strftime('%Y-%m-%d'))
+    quantities = {k: max(0, int(request.form.get(k, 0) or 0)) for k in PRICES}
+    total = sum(quantities[k] * PRICES[k] for k in PRICES)
+    with get_db() as conn:
+        conn.execute('''UPDATE orders SET
+            francesino=?, grano_duro=?, multicereale=?,
+            cornetto_vuoto=?, cornetto_marmellata=?,
+            cornetto_cioccolato=?, cornetto_crema=?,
+            total_amount=?
+            WHERE id=?''',
+            (quantities['francesino'],      quantities['grano_duro'],
+             quantities['multicereale'],    quantities['cornetto_vuoto'],
+             quantities['cornetto_marmellata'], quantities['cornetto_cioccolato'],
+             quantities['cornetto_crema'],  total, order_id))
+    return redirect(url_for('manager_dashboard', date=date))
+
+@app.route('/manager/delete/<int:order_id>', methods=['POST'])
+def manager_delete(order_id):
+    if not session.get('mgr'):
+        return redirect(url_for('manager_login'))
+    with get_db() as conn:
+        conn.execute('DELETE FROM orders WHERE id = ?', (order_id,))
+    return redirect(url_for('manager_dashboard'))
 
 @app.route('/manager/logout')
 def manager_logout():
