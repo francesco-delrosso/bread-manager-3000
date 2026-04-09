@@ -126,10 +126,16 @@ footer a{color:var(--green2);text-decoration:none}
     </div>
     <div class="row">
       <span class="row-label"
-            data-de="Lieferdatum"
-            data-it="Data consegna"
-            data-en="Delivery date">Lieferdatum</span>
-      <span class="row-val">{{ date[8:10] }}.{{ date[5:7] }}.{{ date[0:4] }}</span>
+            data-de="{% if dates|length > 1 %}Lieferdaten{% else %}Lieferdatum{% endif %}"
+            data-it="{% if dates|length > 1 %}Date consegna{% else %}Data consegna{% endif %}"
+            data-en="{% if dates|length > 1 %}Delivery dates{% else %}Delivery date{% endif %}">
+        {% if dates|length > 1 %}Lieferdaten{% else %}Lieferdatum{% endif %}
+      </span>
+      <span class="row-val" style="text-align:right">
+        {% for d in dates %}
+          {{ d[8:10] }}.{{ d[5:7] }}.{{ d[0:4] }}{% if not loop.last %}<br>{% endif %}
+        {% endfor %}
+      </span>
     </div>
   </div>
   <div class="total-row">

@@ -101,13 +101,15 @@ def order_form():
 def submit_order():
     now = datetime.now()
 
-    name  = request.form.get('customer_name', '').strip()
-    pitch = request.form.get('pitch_number',  '').strip()
-    ddate = request.form.get('delivery_date', '').strip()
+    name   = request.form.get('customer_name', '').strip()
+    pitch  = request.form.get('pitch_number',  '').strip()
+    ddates = request.form.getlist('delivery_dates')
 
-    # Validazione server-side: la data deve essere tra quelle attualmente valide
-    valid_dates = [d['value'] for d in get_available_dates(now)]
-    if not name or not pitch or ddate not in valid_dates:
+    # Tieni solo le date valide al momento dell'invio
+    valid = [d['value'] for d in get_available_dates(now)]
+    ddates = [d for d in ddates if d in valid]
+
+    if not name or not pitch or not ddates:
         return redirect(url_for('order_form'))
 
     quantities = {k: max(0, int(request.form.get(k, 0) or 0)) for k in PRICES}
@@ -117,28 +119,32 @@ def submit_order():
         return redirect(url_for('order_form'))
 
     with get_db() as conn:
-        conn.execute('''INSERT INTO orders
-            (delivery_date, customer_name, pitch_number,
-             francesino, grano_duro, multicereale,
-             cornetto_vuoto, cornetto_marmellata,
-             cornetto_cioccolato, cornetto_crema, total_amount)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?)''',
-            (ddate, name, pitch,
-             quantities['francesino'],      quantities['grano_duro'],
-             quantities['multicereale'],    quantities['cornetto_vuoto'],
-             quantities['cornetto_marmellata'], quantities['cornetto_cioccolato'],
-             quantities['cornetto_crema'],  total))
+        for ddate in ddates:
+            conn.execute('''INSERT INTO orders
+                (delivery_date, customer_name, pitch_number,
+                 francesino, grano_duro, multicereale,
+                 cornetto_vuoto, cornetto_marmellata,
+                 cornetto_cioccolato, cornetto_crema, total_amount)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?)''',
+                (ddate, name, pitch,
+                 quantities['francesino'],      quantities['grano_duro'],
+                 quantities['multicereale'],    quantities['cornetto_vuoto'],
+                 quantities['cornetto_marmellata'], quantities['cornetto_cioccolato'],
+                 quantities['cornetto_crema'],  total))
 
     return redirect(url_for('success',
                             name=name, pitch=pitch,
-                            date=ddate, total=f"{total:.2f}"))
+                            dates=','.join(ddates),
+                            total=f"{total:.2f}"))
 
 @app.route('/success')
 def success():
+    raw = request.args.get('dates', request.args.get('date', ''))
+    dates = [d.strip() for d in raw.split(',') if d.strip()]
     return render_template('success.html',
                            name=request.args.get('name',''),
                            pitch=request.args.get('pitch',''),
-                           date=request.args.get('date',''),
+                           dates=dates,
                            total=request.args.get('total','0.00'))
 
 # ── Manager routes ────────────────────────────────────────────────────
