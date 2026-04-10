@@ -31,6 +31,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
   font-weight:600;cursor:pointer;text-decoration:none;display:inline-block}
 .print-btn{background:#555;color:#fff;padding:7px 14px;border:none;
   border-radius:7px;font-size:.82rem;font-weight:600;cursor:pointer}
+.new-order-btn{background:var(--gold);color:#fff;padding:7px 14px;border:none;
+  border-radius:7px;font-size:.82rem;font-weight:600;cursor:pointer;
+  white-space:nowrap;transition:background .2s}
+.new-order-btn:hover{background:#b07800}
 .copy-btn{background:#25D366;color:#fff;padding:7px 14px;border:none;
   border-radius:7px;font-size:.82rem;font-weight:600;cursor:pointer;
   white-space:nowrap;transition:background .2s}
@@ -118,11 +122,110 @@ tr:hover td{background:#fafff8}
   cursor:pointer;opacity:.7;line-height:1;padding:0 4px}
 .notif-close:hover{opacity:1}
 
+/* ── Pannello nuovo ordine ── */
+.no-panel-overlay{display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.5);z-index:300;
+  align-items:flex-end;justify-content:center}
+.no-panel-overlay.open{display:flex}
+.no-panel{background:#f0f4f0;width:100%;max-width:520px;
+  max-height:92vh;border-radius:16px 16px 0 0;
+  display:flex;flex-direction:column;overflow:hidden;
+  transform:translateY(100%);transition:transform .3s ease;
+  box-shadow:0 -6px 30px rgba(0,0,0,.25)}
+.no-panel-overlay.open .no-panel{transform:translateY(0)}
+.no-hdr{background:var(--green);color:#fff;
+  padding:16px 20px;display:flex;align-items:center;
+  justify-content:space-between;flex-shrink:0;font-size:1rem;font-weight:700}
+.no-close{background:rgba(255,255,255,.2);border:none;color:#fff;
+  width:32px;height:32px;border-radius:50%;font-size:1rem;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  line-height:1;transition:background .15s}
+.no-close:hover{background:rgba(255,255,255,.35)}
+.no-body{overflow-y:auto;padding-bottom:8px}
+.no-section{background:#fff;margin:12px;border-radius:10px;
+  box-shadow:0 1px 4px rgba(0,0,0,.08);overflow:hidden}
+.no-sec-title{background:var(--lightg);padding:10px 14px;font-size:.78rem;
+  font-weight:700;color:var(--green);text-transform:uppercase;
+  letter-spacing:.8px;border-bottom:1px solid #b2d8c2}
+.no-fields{padding:14px;display:flex;flex-direction:column;gap:12px}
+.no-field label{display:block;font-size:.78rem;color:#666;
+  font-weight:600;margin-bottom:4px}
+.no-field input[type=text]{width:100%;padding:11px 12px;
+  border:1.5px solid #ccc;border-radius:8px;font-size:1rem;
+  background:#fff;transition:border-color .2s}
+.no-field input[type=text]:focus{border-color:var(--green);outline:none}
+/* date picker */
+.no-date-row{display:flex;gap:8px;align-items:stretch}
+.no-date-display{flex:1;padding:11px 12px;border:1.5px solid #ccc;
+  border-radius:8px;font-size:.88rem;background:#fff;
+  min-height:44px;display:flex;align-items:center;color:#2a2a2a}
+.no-date-display.empty{color:#aaa;font-style:italic}
+.no-cal-btn{width:44px;height:44px;border:1.5px solid #ccc;
+  border-radius:8px;background:#fff;font-size:1.3rem;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  transition:border-color .15s,background .15s}
+.no-cal-btn.open,.no-cal-btn:active{border-color:var(--green);background:var(--lightg)}
+.no-cal-popup{display:none;background:#fff;border-radius:12px;
+  box-shadow:0 4px 20px rgba(0,0,0,.14);padding:14px;
+  border:1px solid #e0ece6;margin-top:6px}
+.no-cal-popup.open{display:block}
+.no-cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.no-cal-nav-btn{background:none;border:none;font-size:1.4rem;cursor:pointer;
+  color:var(--green2);padding:4px 10px;border-radius:6px;line-height:1}
+.no-cal-nav-btn:hover{background:var(--lightg)}
+.no-cal-month{font-size:.95rem;font-weight:700;color:var(--green)}
+.no-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.no-cal-dh{text-align:center;font-size:.62rem;font-weight:700;color:#aaa;
+  text-transform:uppercase;padding:3px 0 5px}
+.no-cal-d{text-align:center;padding:7px 2px;border-radius:6px;
+  font-size:.88rem;cursor:default;line-height:1}
+.no-cal-d.empty{background:none}
+.no-cal-d.off{color:#ddd}
+.no-cal-d.avail{cursor:pointer;color:var(--green2);font-weight:600;background:#f0f9f4}
+.no-cal-d.avail:hover{background:var(--lightg)}
+.no-cal-d.avail.sel{background:var(--green);color:#fff;font-weight:700}
+.no-cal-footer{display:flex;gap:8px;margin-top:12px}
+.no-cal-clear{padding:9px 14px;background:#f0f0f0;color:#555;border:none;
+  border-radius:8px;font-size:.85rem;cursor:pointer}
+.no-cal-confirm{flex:1;padding:9px;background:var(--green);color:#fff;
+  border:none;border-radius:8px;font-size:.9rem;font-weight:700;cursor:pointer}
+/* prodotti */
+.no-prod-row{display:flex;align-items:center;padding:11px 14px;
+  border-bottom:1px solid #f0f0f0;gap:10px}
+.no-prod-row:last-of-type{border-bottom:none}
+.no-prod-name{flex:1}
+.no-prod-name strong{display:block;font-size:.9rem}
+.no-prod-name small{font-size:.72rem;color:#888}
+.no-prod-price{font-size:.8rem;color:var(--green2);font-weight:600;min-width:40px;text-align:right}
+.no-qty-ctrl{display:flex;align-items:center;gap:6px;margin-left:6px}
+.no-qty-btn{width:34px;height:34px;border-radius:50%;
+  border:2px solid var(--green2);background:#fff;color:var(--green2);
+  font-size:1.2rem;font-weight:700;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  line-height:1;-webkit-tap-highlight-color:transparent;
+  transition:background .15s,color .15s}
+.no-qty-btn:active{background:var(--green2);color:#fff}
+.no-qty-val{min-width:26px;text-align:center;font-size:1rem;font-weight:700}
+.no-total-bar{display:flex;justify-content:space-between;align-items:center;
+  padding:13px 14px;background:var(--lightg);border-top:2px solid #b2d8c2}
+.no-total-bar span{font-size:.85rem;color:var(--green);font-weight:600}
+.no-total-bar strong{font-size:1.2rem;color:var(--green);font-weight:800}
+.no-submit{width:100%;padding:15px;background:var(--green);color:#fff;
+  border:none;border-radius:10px;font-size:1rem;font-weight:700;cursor:pointer;
+  transition:background .2s;-webkit-tap-highlight-color:transparent}
+.no-submit:active{background:var(--green2)}
+.no-submit:disabled{background:#aaa;cursor:not-allowed}
+
 /* Print styles */
 @media print{
   .hdr a,.date-bar,.no-print,.modal-overlay,.notif{display:none!important}
   body{background:#fff}
   .table-wrap{box-shadow:none;margin:0}
+  @page{margin:10mm}
+  table{font-size:.7rem}
+  th,td{padding:5px 4px}
+  .table-title{font-size:1.15rem;font-weight:800;padding:14px 16px}
+  .summary{display:none}
 }
 </style>
 </head>
@@ -155,6 +258,7 @@ tr:hover td{background:#fafff8}
   </form>
   <div class="actions-group">
     <button class="copy-btn" id="btn_copia" onclick="copiaOrdine()">📋 Copia Ordine Panettiere</button>
+    <button class="new-order-btn" onclick="apriNuovoOrdine()">➕ Nuovo Ordine</button>
     <a class="export-btn" href="/manager/export?date={{ selected_date }}">⬇ CSV</a>
     <button class="print-btn" onclick="window.print()">🖨 Stampa</button>
   </div>
@@ -177,37 +281,37 @@ tr:hover td{background:#fafff8}
 <!-- Product totals -->
 <div class="summary" style="padding-top:0">
   <div class="sum-card">
-    <h3>Weizenbröt. / Francesino</h3>
+    <h3>🍞 Francesino</h3>
     <p>{{ totals.francesino }}</p>
     <small>× € 0.70</small>
   </div>
   <div class="sum-card">
-    <h3>Hartweizenbrötchen</h3>
+    <h3>🌾 Grano duro</h3>
     <p>{{ totals.grano_duro }}</p>
     <small>× € 0.80</small>
   </div>
   <div class="sum-card">
-    <h3>Mehrkornbrot</h3>
+    <h3>🌱 Multicereale</h3>
     <p>{{ totals.multicereale }}</p>
     <small>× € 2.70</small>
   </div>
   <div class="sum-card">
-    <h3>Croissant pur</h3>
+    <h3>🥐 C. vuoto</h3>
     <p>{{ totals.cornetto_vuoto }}</p>
     <small>× € 1.60</small>
   </div>
   <div class="sum-card">
-    <h3>Croissant Marmelade</h3>
+    <h3>🍓 C. marmellata</h3>
     <p>{{ totals.cornetto_marmellata }}</p>
     <small>× € 1.60</small>
   </div>
   <div class="sum-card">
-    <h3>Croissant Schoko</h3>
+    <h3>🍫 C. cioccolato</h3>
     <p>{{ totals.cornetto_cioccolato }}</p>
     <small>× € 1.60</small>
   </div>
   <div class="sum-card">
-    <h3>Croissant Creme</h3>
+    <h3>🍮 C. crema</h3>
     <p>{{ totals.cornetto_crema }}</p>
     <small>× € 1.60</small>
   </div>
@@ -228,12 +332,12 @@ tr:hover td{background:#fafff8}
         <th>Ora</th>
         <th>Cognome / Name</th>
         <th>Piazzola</th>
-        <th title="Francesino">🍞 Fra.</th>
-        <th title="Grano Duro">GD</th>
+        <th title="Francesino">Fra.</th>
+        <th title="Grano duro">G.D.</th>
         <th title="Multicereale">Mul.</th>
-        <th title="Cornetto vuoto">C.pur</th>
+        <th title="Cornetto vuoto">C.Vuo.</th>
         <th title="Cornetto marmellata">C.Mar.</th>
-        <th title="Cornetto cioccolato">C.Sch.</th>
+        <th title="Cornetto cioccolato">C.Cio.</th>
         <th title="Cornetto crema">C.Cr.</th>
         <th>€</th>
         <th class="no-print"></th>
@@ -280,7 +384,7 @@ tr:hover td{background:#fafff8}
       <!-- Totals row -->
       <tr style="background:var(--lightg);font-weight:700">
         <td colspan="4" style="padding:9px 8px;color:var(--green);font-size:.8rem">
-          TOTALE / GESAMT
+          TOTALE
         </td>
         <td class="td-num">{{ totals.francesino }}</td>
         <td class="td-num">{{ totals.grano_duro }}</td>
@@ -300,6 +404,152 @@ tr:hover td{background:#fafff8}
     📭 Nessun ordine ricevuto per il {{ selected_date }}
   </div>
   {% endif %}
+</div>
+
+<!-- ── Pannello nuovo ordine ── -->
+<div class="no-panel-overlay" id="no-overlay" onclick="if(event.target===this) chiudiNuovoOrdine()">
+  <div class="no-panel" id="no-panel">
+
+    <!-- Header -->
+    <div class="no-hdr">
+      <span>➕ Nuovo ordine manuale</span>
+      <button type="button" class="no-close" onclick="chiudiNuovoOrdine()">✕</button>
+    </div>
+
+    <div class="no-body">
+    <form method="POST" action="/manager/new-order" id="new-order-form">
+
+      <!-- Dati cliente -->
+      <div class="no-section">
+        <div class="no-sec-title">👤 Dati cliente</div>
+        <div class="no-fields">
+          <div class="no-field">
+            <label>Cognome *</label>
+            <input type="text" name="customer_name" id="new_name" required
+                   autocomplete="off" placeholder="—">
+          </div>
+          <div class="no-field">
+            <label>Piazzola Nr. *</label>
+            <input type="text" name="pitch_number" id="new_pitch" required
+                   autocomplete="off" placeholder="—">
+          </div>
+
+          <!-- Date picker -->
+          <div class="no-field">
+            <label>Data di consegna *</label>
+            <div class="no-date-row">
+              <div class="no-date-display empty" id="no_date_display">Seleziona una data…</div>
+              <button type="button" class="no-cal-btn" id="no_cal_btn" onclick="noToggleCal()">📅</button>
+            </div>
+            <div class="no-cal-popup" id="no_cal_popup">
+              <div class="no-cal-nav">
+                <button type="button" class="no-cal-nav-btn" onclick="noShiftMonth(-1)">‹</button>
+                <span class="no-cal-month" id="no_cal_month"></span>
+                <button type="button" class="no-cal-nav-btn" onclick="noShiftMonth(1)">›</button>
+              </div>
+              <div class="no-cal-grid" id="no_cal_grid"></div>
+              <div class="no-cal-footer">
+                <button type="button" class="no-cal-clear" onclick="noClearDate()">Cancella</button>
+                <button type="button" class="no-cal-confirm" onclick="noCloseCal()">Conferma</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Prodotti pane -->
+      <div class="no-section">
+        <div class="no-sec-title">🍞 Pane</div>
+        <div class="no-prod-row">
+          <div class="no-prod-name"><strong>Francesino</strong><small>Panino di grano tenero</small></div>
+          <div class="no-prod-price">€ 0.70</div>
+          <div class="no-qty-ctrl">
+            <button type="button" class="no-qty-btn" onclick="noQty('francesino',-1)">−</button>
+            <span class="no-qty-val" id="nqv_francesino">0</span>
+            <button type="button" class="no-qty-btn" onclick="noQty('francesino',1)">+</button>
+            <input type="hidden" name="francesino" id="nqi_francesino" value="0">
+          </div>
+        </div>
+        <div class="no-prod-row">
+          <div class="no-prod-name"><strong>Grano duro</strong><small>Pane di semola</small></div>
+          <div class="no-prod-price">€ 0.80</div>
+          <div class="no-qty-ctrl">
+            <button type="button" class="no-qty-btn" onclick="noQty('grano_duro',-1)">−</button>
+            <span class="no-qty-val" id="nqv_grano_duro">0</span>
+            <button type="button" class="no-qty-btn" onclick="noQty('grano_duro',1)">+</button>
+            <input type="hidden" name="grano_duro" id="nqi_grano_duro" value="0">
+          </div>
+        </div>
+        <div class="no-prod-row">
+          <div class="no-prod-name"><strong>Multicereale</strong><small>Con semi misti</small></div>
+          <div class="no-prod-price">€ 2.70</div>
+          <div class="no-qty-ctrl">
+            <button type="button" class="no-qty-btn" onclick="noQty('multicereale',-1)">−</button>
+            <span class="no-qty-val" id="nqv_multicereale">0</span>
+            <button type="button" class="no-qty-btn" onclick="noQty('multicereale',1)">+</button>
+            <input type="hidden" name="multicereale" id="nqi_multicereale" value="0">
+          </div>
+        </div>
+      </div>
+
+      <!-- Prodotti cornetti -->
+      <div class="no-section">
+        <div class="no-sec-title">🥐 Cornetti</div>
+        <div class="no-prod-row">
+          <div class="no-prod-name"><strong>Cornetto vuoto</strong><small>Senza ripieno</small></div>
+          <div class="no-prod-price">€ 1.60</div>
+          <div class="no-qty-ctrl">
+            <button type="button" class="no-qty-btn" onclick="noQty('cornetto_vuoto',-1)">−</button>
+            <span class="no-qty-val" id="nqv_cornetto_vuoto">0</span>
+            <button type="button" class="no-qty-btn" onclick="noQty('cornetto_vuoto',1)">+</button>
+            <input type="hidden" name="cornetto_vuoto" id="nqi_cornetto_vuoto" value="0">
+          </div>
+        </div>
+        <div class="no-prod-row">
+          <div class="no-prod-name"><strong>Cornetto marmellata</strong><small>Ripieno di marmellata</small></div>
+          <div class="no-prod-price">€ 1.60</div>
+          <div class="no-qty-ctrl">
+            <button type="button" class="no-qty-btn" onclick="noQty('cornetto_marmellata',-1)">−</button>
+            <span class="no-qty-val" id="nqv_cornetto_marmellata">0</span>
+            <button type="button" class="no-qty-btn" onclick="noQty('cornetto_marmellata',1)">+</button>
+            <input type="hidden" name="cornetto_marmellata" id="nqi_cornetto_marmellata" value="0">
+          </div>
+        </div>
+        <div class="no-prod-row">
+          <div class="no-prod-name"><strong>Cornetto cioccolato</strong><small>Ripieno di cioccolato</small></div>
+          <div class="no-prod-price">€ 1.60</div>
+          <div class="no-qty-ctrl">
+            <button type="button" class="no-qty-btn" onclick="noQty('cornetto_cioccolato',-1)">−</button>
+            <span class="no-qty-val" id="nqv_cornetto_cioccolato">0</span>
+            <button type="button" class="no-qty-btn" onclick="noQty('cornetto_cioccolato',1)">+</button>
+            <input type="hidden" name="cornetto_cioccolato" id="nqi_cornetto_cioccolato" value="0">
+          </div>
+        </div>
+        <div class="no-prod-row">
+          <div class="no-prod-name"><strong>Cornetto crema</strong><small>Ripieno di crema</small></div>
+          <div class="no-prod-price">€ 1.60</div>
+          <div class="no-qty-ctrl">
+            <button type="button" class="no-qty-btn" onclick="noQty('cornetto_crema',-1)">−</button>
+            <span class="no-qty-val" id="nqv_cornetto_crema">0</span>
+            <button type="button" class="no-qty-btn" onclick="noQty('cornetto_crema',1)">+</button>
+            <input type="hidden" name="cornetto_crema" id="nqi_cornetto_crema" value="0">
+          </div>
+        </div>
+        <!-- Totale -->
+        <div class="no-total-bar">
+          <span>Totale ordine</span>
+          <strong id="no_total">€ 0.00</strong>
+        </div>
+      </div>
+
+      <div style="padding:0 16px 24px">
+        <button type="submit" class="no-submit" id="no_submit_btn" disabled>
+          💾 Inserisci Ordine
+        </button>
+      </div>
+    </form>
+    </div><!-- /no-body -->
+  </div>
 </div>
 
 <!-- ── Modal modifica ordine ── -->
@@ -412,6 +662,141 @@ function apriModifica(btn) {
 
 function chiudiModale() {
   document.getElementById('modal').classList.remove('open');
+}
+
+// ── Pannello nuovo ordine ─────────────────────────────────────────────
+const NO_AVAIL = [
+  {% for d in available_dates %}
+  { value:"{{ d.value }}", label:"{{ d.it }}" },
+  {% endfor %}
+];
+const NO_AVAIL_SET = new Set(NO_AVAIL.map(d => d.value));
+let noSelected = null; // singola data
+const NO_MONTHS = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno',
+                   'Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+const NO_DHDRS  = ['Lu','Ma','Me','Gi','Ve','Sa','Do'];
+const NO_PRICES = {francesino:0.70,grano_duro:0.80,multicereale:2.70,
+  cornetto_vuoto:1.60,cornetto_marmellata:1.60,
+  cornetto_cioccolato:1.60,cornetto_crema:1.60};
+
+let noCalY, noCalM;
+
+function noRenderCal(){
+  document.getElementById('no_cal_month').textContent = NO_MONTHS[noCalM] + ' ' + noCalY;
+  const grid = document.getElementById('no_cal_grid');
+  grid.innerHTML = '';
+  NO_DHDRS.forEach(h => {
+    const c = document.createElement('div');
+    c.className = 'no-cal-dh'; c.textContent = h; grid.appendChild(c);
+  });
+  const offset = (new Date(noCalY, noCalM, 1).getDay() + 6) % 7;
+  for(let i=0;i<offset;i++){
+    const e=document.createElement('div');e.className='no-cal-d empty';grid.appendChild(e);
+  }
+  const days = new Date(noCalY, noCalM+1, 0).getDate();
+  for(let day=1;day<=days;day++){
+    const ds=`${noCalY}-${String(noCalM+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const c=document.createElement('div');
+    c.textContent=day;
+    if(NO_AVAIL_SET.has(ds)){
+      c.className='no-cal-d avail'+(noSelected===ds?' sel':'');
+      c.onclick=(e)=>{e.stopPropagation();noSelectDate(ds);};
+    } else { c.className='no-cal-d off'; }
+    grid.appendChild(c);
+  }
+}
+function noSelectDate(ds){
+  noSelected = (noSelected===ds) ? null : ds;
+  // aggiorna hidden input
+  let inp = document.getElementById('no_hidden_date');
+  if(!inp){ inp=document.createElement('input');inp.type='hidden';
+    inp.name='delivery_date';inp.id='no_hidden_date';
+    document.getElementById('new-order-form').appendChild(inp); }
+  inp.value = noSelected || '';
+  noRenderCal();
+  noUpdateDisplay();
+  noUpdateSubmit();
+}
+function noUpdateDisplay(){
+  const el = document.getElementById('no_date_display');
+  if(!noSelected){ el.classList.add('empty'); el.textContent='Seleziona una data…'; return; }
+  el.classList.remove('empty');
+  const d = NO_AVAIL.find(x=>x.value===noSelected);
+  el.textContent = d ? d.label : noSelected;
+}
+function noClearDate(){ noSelected=null; noRenderCal(); noUpdateDisplay(); noUpdateSubmit(); }
+function noShiftMonth(delta){
+  noCalM+=delta;
+  if(noCalM>11){noCalM=0;noCalY++;} if(noCalM<0){noCalM=11;noCalY--;}
+  noRenderCal();
+}
+function noToggleCal(){
+  const p=document.getElementById('no_cal_popup'),b=document.getElementById('no_cal_btn');
+  const open=p.classList.toggle('open'); b.classList.toggle('open',open);
+}
+function noCloseCal(){
+  document.getElementById('no_cal_popup').classList.remove('open');
+  document.getElementById('no_cal_btn').classList.remove('open');
+}
+document.addEventListener('click', e=>{
+  const p=document.getElementById('no_cal_popup'),b=document.getElementById('no_cal_btn');
+  if(p && p.classList.contains('open') && !p.contains(e.target) && e.target!==b) noCloseCal();
+});
+
+function noQty(key, delta){
+  const span=document.getElementById('nqv_'+key);
+  const inp=document.getElementById('nqi_'+key);
+  const v=Math.max(0,parseInt(span.textContent||0)+delta);
+  span.textContent=v; inp.value=v;
+  noUpdateTotal(); noUpdateSubmit();
+}
+function noUpdateTotal(){
+  let t=0;
+  Object.keys(NO_PRICES).forEach(k=>{
+    const el=document.getElementById('nqi_'+k);
+    if(el) t+=parseInt(el.value||0)*NO_PRICES[k];
+  });
+  document.getElementById('no_total').textContent='€ '+t.toFixed(2);
+}
+function noUpdateSubmit(){
+  const name=document.getElementById('new_name');
+  const pitch=document.getElementById('new_pitch');
+  let total=0;
+  Object.keys(NO_PRICES).forEach(k=>{
+    const el=document.getElementById('nqi_'+k);
+    if(el) total+=parseInt(el.value||0)*NO_PRICES[k];
+  });
+  document.getElementById('no_submit_btn').disabled=(
+    !noSelected || total===0 ||
+    !name||!name.value.trim() ||
+    !pitch||!pitch.value.trim()
+  );
+}
+['new_name','new_pitch'].forEach(id=>{
+  const el=document.getElementById(id);
+  if(el) el.addEventListener('input',noUpdateSubmit);
+});
+
+function apriNuovoOrdine(){
+  // reset
+  noSelected=null;
+  const first = NO_AVAIL.length ? new Date(NO_AVAIL[0].value+'T00:00:00') : new Date();
+  noCalY=first.getFullYear(); noCalM=first.getMonth();
+  document.getElementById('new_name').value='';
+  document.getElementById('new_pitch').value='';
+  Object.keys(NO_PRICES).forEach(k=>{
+    document.getElementById('nqv_'+k).textContent='0';
+    document.getElementById('nqi_'+k).value='0';
+  });
+  const inp=document.getElementById('no_hidden_date');
+  if(inp) inp.value='';
+  noRenderCal(); noUpdateDisplay(); noUpdateTotal(); noUpdateSubmit();
+  document.getElementById('no-overlay').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function chiudiNuovoOrdine(){
+  document.getElementById('no-overlay').classList.remove('open');
+  document.body.style.overflow='';
 }
 
 // ── Polling nuovi ordini (ogni 30s) ───────────────────────────────────

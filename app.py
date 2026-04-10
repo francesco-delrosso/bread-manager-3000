@@ -20,6 +20,8 @@ DB_PATH          = os.path.join(os.path.dirname(__file__), 'orders.db')
 MANAGER_PASSWORD = os.environ.get('MANAGER_PWD', 'camping2024')   # change this!
 CUTOFF_HOUR      = 18   # prima delle 18:00 → domani disponibile; dopo → dopodomani
 
+VALID_PITCHES = {str(i) for i in range(1, 61)} | {'5a', '12a', '33a', '59a'}
+
 PRICES = {
     'francesino':           0.70,
     'grano_duro':           0.80,
@@ -111,6 +113,8 @@ def submit_order():
 
     if not name or not pitch or not ddates:
         return redirect(url_for('order_form'))
+    if pitch.lower() not in VALID_PITCHES:
+        return redirect(url_for('order_form'))
 
     quantities = {k: max(0, int(request.form.get(k, 0) or 0)) for k in PRICES}
     total = sum(quantities[k] * PRICES[k] for k in PRICES)
@@ -187,7 +191,8 @@ def manager_dashboard():
                            selected_date=sel,
                            totals=totals,
                            grand_total=grand,
-                           prices=PRICES)
+                           prices=PRICES,
+                           available_dates=get_available_dates(datetime.now()))
 
 @app.route('/manager/stats')
 def manager_stats():
@@ -326,6 +331,39 @@ def manager_cornetti():
                            selected_date=sel,
                            totals=totals,
                            grand_total=grand)
+
+@app.route('/manager/new-order', methods=['POST'])
+def manager_new_order():
+    if not session.get('mgr'):
+        return redirect(url_for('manager_login'))
+
+    name  = request.form.get('customer_name', '').strip()
+    pitch = request.form.get('pitch_number',  '').strip()
+    date  = request.form.get('delivery_date', '').strip()
+
+    if not name or not pitch or not date:
+        return redirect(url_for('manager_dashboard'))
+
+    quantities = {k: max(0, int(request.form.get(k, 0) or 0)) for k in PRICES}
+    total = sum(quantities[k] * PRICES[k] for k in PRICES)
+
+    if total == 0:
+        return redirect(url_for('manager_dashboard', date=date))
+
+    with get_db() as conn:
+        conn.execute('''INSERT INTO orders
+            (delivery_date, customer_name, pitch_number,
+             francesino, grano_duro, multicereale,
+             cornetto_vuoto, cornetto_marmellata,
+             cornetto_cioccolato, cornetto_crema, total_amount)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?)''',
+            (date, name, pitch,
+             quantities['francesino'],      quantities['grano_duro'],
+             quantities['multicereale'],    quantities['cornetto_vuoto'],
+             quantities['cornetto_marmellata'], quantities['cornetto_cioccolato'],
+             quantities['cornetto_crema'],  total))
+
+    return redirect(url_for('manager_dashboard', date=date))
 
 @app.route('/manager/edit/<int:order_id>', methods=['POST'])
 def manager_edit(order_id):

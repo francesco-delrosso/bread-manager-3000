@@ -179,7 +179,14 @@ footer a{color:var(--green2);text-decoration:none}
         Stellplatz Nr. *
       </label>
       <input type="text" name="pitch_number" required inputmode="text"
-             placeholder="— " id="inp_pitch">
+             placeholder="— " id="inp_pitch" autocomplete="off">
+      <span id="pitch_err" style="display:none;font-size:.75rem;color:#c0392b;
+            margin-top:4px;display:none"
+            data-de="Ungültige Stellplatznummer."
+            data-it="Numero piazzola non valido."
+            data-en="Invalid pitch number.">
+        Numero piazzola non valido.
+      </span>
     </div>
     <div class="field">
       <label data-de="Lieferdatum *" data-it="Data di consegna *" data-en="Delivery date *">
@@ -346,6 +353,13 @@ footer a{color:var(--green2);text-decoration:none}
 </footer>
 
 <script>
+// ── Piazzole valide ───────────────────────────────────────────────────
+const VALID_PITCHES = new Set([
+  ...Array.from({length:60},(_,i)=>String(i+1)),
+  '5a','12a','33a','59a'
+]);
+function isPitchValid(v){ return VALID_PITCHES.has(v.trim().toLowerCase()); }
+
 // ── Dati disponibili dal backend ──────────────────────────────────────
 const AVAIL = [
   {% for d in available_dates %}
@@ -398,7 +412,7 @@ function renderCal() {
     c.textContent = day;
     if(AVAIL_SET.has(ds)){
       c.className = 'cal-d avail' + (selected.has(ds) ? ' sel' : '');
-      c.onclick = () => toggleDate(ds);
+      c.onclick = (e) => { e.stopPropagation(); toggleDate(ds); };
     } else {
       c.className = 'cal-d off';
     }
@@ -491,10 +505,15 @@ function updateTotal(){
   const btn   = document.getElementById('btn_submit');
   const name  = document.getElementById('inp_name');
   const pitch = document.getElementById('inp_pitch');
+  const pitchVal = pitch ? pitch.value.trim() : '';
+  const pitchOk  = pitchVal !== '' && isPitchValid(pitchVal);
+  const errEl    = document.getElementById('pitch_err');
+  if(errEl) errEl.style.display = (pitchVal && !pitchOk) ? 'block' : 'none';
+  if(pitch) pitch.style.borderColor = (pitchVal && !pitchOk) ? '#c0392b' : '';
   if(btn) btn.disabled = (
     t === 0 ||
     !name  || !name.value.trim()  ||
-    !pitch || !pitch.value.trim() ||
+    !pitchOk ||
     selected.size === 0
   );
   updateNote();
