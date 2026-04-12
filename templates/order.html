@@ -100,8 +100,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 .product-row{display:flex;align-items:center;padding:11px 14px;
   border-bottom:1px solid #f0f0f0;gap:10px}
 .product-row:last-child{border-bottom:none}
-.prod-name{flex:1}
-.prod-name strong{display:block;font-size:.9rem}
+.prod-name{flex:1;min-width:0}
+.prod-name strong{display:block;font-size:.9rem;overflow-wrap:break-word}
 .prod-name small{font-size:.72rem;color:var(--gray)}
 .prod-price{font-size:.8rem;color:var(--green2);font-weight:600;
   min-width:42px;text-align:right}
