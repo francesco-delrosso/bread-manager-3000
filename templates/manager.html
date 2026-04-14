@@ -636,13 +636,25 @@ function copiaOrdine() {
   const testo =
     `Ciao! Ecco l'ordine del Piccolo Camping per il {{ selected_date }}:\n` +
     righe.join('\n') + `\nGrazie!`;
-  navigator.clipboard.writeText(testo).then(() => {
-    const btn = document.getElementById('btn_copia');
-    const orig = btn.textContent;
+  const btn = document.getElementById('btn_copia');
+  const orig = btn.textContent;
+  function onCopied() {
     btn.textContent = '✅ Copiato! Ora incollalo su WhatsApp';
     btn.style.background = '#1B5E3B';
     setTimeout(() => { btn.textContent = orig; btn.style.background = ''; }, 3000);
-  }).catch(() => alert('Impossibile copiare automaticamente. Riprova.'));
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(testo).then(onCopied).catch(() => alert('Impossibile copiare automaticamente. Riprova.'));
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = testo;
+    ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus(); ta.select();
+    try { document.execCommand('copy'); onCopied(); }
+    catch { alert('Impossibile copiare automaticamente. Riprova.'); }
+    document.body.removeChild(ta);
+  }
 }
 
 // ── Modal modifica ────────────────────────────────────────────────────
