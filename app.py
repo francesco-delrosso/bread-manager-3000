@@ -3,21 +3,33 @@ Piccolo Camping – Sistema Ordini Pane e Dolci
 Flask + SQLite | DE / IT / EN
 """
 from flask import (Flask, render_template, request,
-                   redirect, url_for, session, make_response)
+                   redirect, url_for, session, make_response, g)
 import sqlite3
 import csv
 import io
 from datetime import datetime, timedelta
 import os
-
-#TODO: Fare una lista di tutte le piazzole e fare un controllo se l'utente ne inserisce una valida e per evitare confusioni bisogna controllare anche duplicati.
+import secrets
+import logging
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'piccolo_camping_secret_2024')
 
 # ── Configuration ────────────────────────────────────────────────────
-DB_PATH          = os.path.join(os.path.dirname(__file__), 'orders.db')
-MANAGER_PASSWORD = os.environ.get('MANAGER_PWD', 'camping2024')   # change this!
+# Secret key: usa env var in produzione, altrimenti genera casuale (sessioni invalidate al riavvio)
+_secret = os.environ.get('SECRET_KEY')
+if not _secret:
+    _secret = secrets.token_hex(32)
+    logging.warning('SECRET_KEY non impostata! Generata casuale — le sessioni manager '
+                    'saranno invalidate al prossimo riavvio. Imposta SECRET_KEY env var.')
+app.secret_key = _secret
+
+# Sessione manager scade dopo 8 ore
+app.permanent_session_lifetime = timedelta(hours=8)
+
+# DB su chiavetta USB se montata, altrimenti fallback locale
+# Su RPi montare la USB es. su /mnt/usb e impostare DB_PATH=/mnt/usb/orders.db
+DB_PATH          = os.environ.get('DB_PATH', os.path.join(os.path.dirname(__file__), 'orders.db'))
+MANAGER_PASSWORD = os.environ.get('MANAGER_PWD', 'camping2024')
 CUTOFF_HOUR      = 18   # prima delle 18:00 → domani disponibile; dopo → dopodomani
 
 VALID_PITCHES = {str(i) for i in range(1, 61)} | {'5a', '12a', '33a', '59a'}
@@ -38,27 +50,40 @@ DAYS_EN = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday
 
 # ── Database ─────────────────────────────────────────────────────────
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+    """Restituisce connessione SQLite con WAL mode (migliore concorrenza)."""
+    if 'db' not in g:
+        g.db = sqlite3.connect(DB_PATH, timeout=10)
+        g.db.row_factory = sqlite3.Row
+        g.db.execute('PRAGMA journal_mode=WAL')
+        g.db.execute('PRAGMA busy_timeout=5000')
+    return g.db
+
+@app.teardown_appcontext
+def close_db(exc):
+    db = g.pop('db', None)
+    if db is not None:
+        db.close()
 
 def init_db():
-    with get_db() as conn:
-        conn.execute('''CREATE TABLE IF NOT EXISTS orders (
-            id                  INTEGER PRIMARY KEY AUTOINCREMENT,
-            created_at          TEXT    DEFAULT (datetime('now','localtime')),
-            delivery_date       TEXT    NOT NULL,
-            customer_name       TEXT    NOT NULL,
-            pitch_number        TEXT    NOT NULL,
-            francesino          INTEGER DEFAULT 0,
-            grano_duro          INTEGER DEFAULT 0,
-            multicereale        INTEGER DEFAULT 0,
-            cornetto_vuoto      INTEGER DEFAULT 0,
-            cornetto_marmellata INTEGER DEFAULT 0,
-            cornetto_cioccolato INTEGER DEFAULT 0,
-            cornetto_crema      INTEGER DEFAULT 0,
-            total_amount        REAL    DEFAULT 0
-        )''')
+    conn = sqlite3.connect(DB_PATH, timeout=10)
+    conn.execute('PRAGMA journal_mode=WAL')
+    conn.execute('''CREATE TABLE IF NOT EXISTS orders (
+        id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+        created_at          TEXT    DEFAULT (datetime('now','localtime')),
+        delivery_date       TEXT    NOT NULL,
+        customer_name       TEXT    NOT NULL,
+        pitch_number        TEXT    NOT NULL,
+        francesino          INTEGER DEFAULT 0,
+        grano_duro          INTEGER DEFAULT 0,
+        multicereale        INTEGER DEFAULT 0,
+        cornetto_vuoto      INTEGER DEFAULT 0,
+        cornetto_marmellata INTEGER DEFAULT 0,
+        cornetto_cioccolato INTEGER DEFAULT 0,
+        cornetto_crema      INTEGER DEFAULT 0,
+        total_amount        REAL    DEFAULT 0
+    )''')
+    conn.commit()
+    conn.close()
 
 # ── Helpers ───────────────────────────────────────────────────────────
 def is_past_cutoff(now: datetime) -> bool:
@@ -104,7 +129,7 @@ def submit_order():
     now = datetime.now()
 
     name   = request.form.get('customer_name', '').strip()
-    pitch  = request.form.get('pitch_number',  '').strip()
+    pitch  = request.form.get('pitch_number',  '').strip().lower()
     ddates = request.form.getlist('delivery_dates')
 
     # Tieni solo le date valide al momento dell'invio
@@ -113,7 +138,7 @@ def submit_order():
 
     if not name or not pitch or not ddates:
         return redirect(url_for('order_form'))
-    if pitch.lower() not in VALID_PITCHES:
+    if pitch not in VALID_PITCHES:
         return redirect(url_for('order_form'))
 
     quantities = {k: max(0, int(request.form.get(k, 0) or 0)) for k in PRICES}
@@ -157,6 +182,7 @@ def manager_login():
     error = False
     if request.method == 'POST':
         if request.form.get('password') == MANAGER_PASSWORD:
+            session.permanent = True
             session['mgr'] = True
             return redirect(url_for('manager_dashboard'))
         error = True
@@ -338,7 +364,7 @@ def manager_new_order():
         return redirect(url_for('manager_login'))
 
     name  = request.form.get('customer_name', '').strip()
-    pitch = request.form.get('pitch_number',  '').strip()
+    pitch = request.form.get('pitch_number',  '').strip().lower()
     date  = request.form.get('delivery_date', '').strip()
 
     if not name or not pitch or not date:
@@ -412,43 +438,49 @@ def manager_logout():
 # ── Seed ─────────────────────────────────────────────────────────────
 def seed_db():
     """Inserisce ordini di prova solo se il database è vuoto."""
-    with get_db() as conn:
-        if conn.execute('SELECT COUNT(*) FROM orders').fetchone()[0] > 0:
-            return  # dati già presenti, non sovrascrivere
+    conn = sqlite3.connect(DB_PATH, timeout=10)
+    conn.row_factory = sqlite3.Row
+    if conn.execute('SELECT COUNT(*) FROM orders').fetchone()[0] > 0:
+        conn.close()
+        return
 
-        now = datetime.now()
-        d1  = (now + timedelta(days=1)).strftime('%Y-%m-%d')  # domani
-        d2  = (now + timedelta(days=2)).strftime('%Y-%m-%d')  # dopodomani
-        d3  = (now + timedelta(days=3)).strftime('%Y-%m-%d')  # +3 giorni
+    now = datetime.now()
+    d1  = (now + timedelta(days=1)).strftime('%Y-%m-%d')
+    d2  = (now + timedelta(days=2)).strftime('%Y-%m-%d')
+    d3  = (now + timedelta(days=3)).strftime('%Y-%m-%d')
 
-        INSERT = '''INSERT INTO orders
-            (delivery_date, customer_name, pitch_number,
-             francesino, grano_duro, multicereale,
-             cornetto_vuoto, cornetto_marmellata,
-             cornetto_cioccolato, cornetto_crema, total_amount)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?)'''
+    INSERT = '''INSERT INTO orders
+        (delivery_date, customer_name, pitch_number,
+         francesino, grano_duro, multicereale,
+         cornetto_vuoto, cornetto_marmellata,
+         cornetto_cioccolato, cornetto_crema, total_amount)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?)'''
 
-        sample = [
-            # (data, cognome, piazzola, fra, gd, mul, c_vuo, c_mar, c_cio, c_cre)
-            (d1, 'Müller',     '12',  2, 1, 0, 2, 0, 1, 0),
-            (d1, 'Schneider',  '7',   0, 0, 1, 0, 2, 0, 2),
-            (d1, 'Fischer',    '23',  3, 0, 0, 1, 1, 0, 0),
-            (d1, 'Weber',      '5',   1, 2, 0, 0, 0, 2, 1),
-            (d2, 'Bauer',      '18',  2, 0, 1, 3, 0, 0, 1),
-            (d2, 'Koch',       '3',   0, 1, 0, 0, 1, 1, 0),
-            (d2, 'Hoffmann',   '31',  4, 0, 0, 2, 2, 0, 0),
-            (d3, 'Schäfer',    '9',   1, 1, 1, 0, 0, 0, 3),
-            (d3, 'Zimmermann', '14',  0, 0, 2, 1, 0, 1, 1),
-        ]
+    sample = [
+        (d1, 'Müller',     '12',  2, 1, 0, 2, 0, 1, 0),
+        (d1, 'Schneider',  '7',   0, 0, 1, 0, 2, 0, 2),
+        (d1, 'Fischer',    '23',  3, 0, 0, 1, 1, 0, 0),
+        (d1, 'Weber',      '5',   1, 2, 0, 0, 0, 2, 1),
+        (d2, 'Bauer',      '18',  2, 0, 1, 3, 0, 0, 1),
+        (d2, 'Koch',       '3',   0, 1, 0, 0, 1, 1, 0),
+        (d2, 'Hoffmann',   '31',  4, 0, 0, 2, 2, 0, 0),
+        (d3, 'Schäfer',    '9',   1, 1, 1, 0, 0, 0, 3),
+        (d3, 'Zimmermann', '14',  0, 0, 2, 1, 0, 1, 1),
+    ]
 
-        for row in sample:
-            d, nome, piaz, fra, gd, mul, cvu, cma, cch, ccr = row
-            total = (fra*0.70 + gd*0.80 + mul*2.70 +
-                     cvu*1.60 + cma*1.60 + cch*1.60 + ccr*1.60)
-            conn.execute(INSERT, (d, nome, piaz, fra, gd, mul, cvu, cma, cch, ccr, total))
+    for row in sample:
+        d, nome, piaz, fra, gd, mul, cvu, cma, cch, ccr = row
+        total = (fra*0.70 + gd*0.80 + mul*2.70 +
+                 cvu*1.60 + cma*1.60 + cch*1.60 + ccr*1.60)
+        conn.execute(INSERT, (d, nome, piaz, fra, gd, mul, cvu, cma, cch, ccr, total))
+
+    conn.commit()
+    conn.close()
+
+# ── Inizializzazione (funziona sia con python app.py che con gunicorn) ──
+init_db()
 
 # ── Run ───────────────────────────────────────────────────────────────
 if __name__ == '__main__':
-    init_db()
     seed_db()
     app.run(debug=False, host='0.0.0.0', port=8000)
