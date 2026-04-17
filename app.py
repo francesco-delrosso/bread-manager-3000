@@ -64,6 +64,20 @@ def close_db(exc):
     if db is not None:
         db.close()
 
+@app.errorhandler(sqlite3.OperationalError)
+def handle_db_error(e):
+    logging.error(f'Errore database: {e}')
+    return ('''<!DOCTYPE html><html><head><meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1">
+        <title>Errore</title>
+        <style>body{font-family:sans-serif;text-align:center;padding:60px 20px;
+        background:#FFF3F3}h1{color:#c0392b}p{color:#555;margin:16px 0}
+        a{color:#1B5E3B;font-weight:bold}</style></head>
+        <body><h1>Servizio temporaneamente non disponibile</h1>
+        <p>Il database non è raggiungibile. La chiavetta USB potrebbe non essere collegata.</p>
+        <p>Dienst vorübergehend nicht verfügbar. Bitte versuchen Sie es später erneut.</p>
+        <p><a href="/">Riprova / Erneut versuchen</a></p></body></html>''', 503)
+
 def init_db():
     conn = sqlite3.connect(DB_PATH, timeout=10)
     conn.execute('PRAGMA journal_mode=WAL')
@@ -149,17 +163,38 @@ def submit_order():
 
     with get_db() as conn:
         for ddate in ddates:
-            conn.execute('''INSERT INTO orders
-                (delivery_date, customer_name, pitch_number,
-                 francesino, grano_duro, multicereale,
-                 cornetto_vuoto, cornetto_marmellata,
-                 cornetto_cioccolato, cornetto_crema, total_amount)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?)''',
-                (ddate, name, pitch,
-                 quantities['francesino'],      quantities['grano_duro'],
-                 quantities['multicereale'],    quantities['cornetto_vuoto'],
-                 quantities['cornetto_marmellata'], quantities['cornetto_cioccolato'],
-                 quantities['cornetto_crema'],  total))
+            # Se esiste gia un ordine per stessa piazzola+data, aggiorna sommando
+            existing = conn.execute(
+                'SELECT id FROM orders WHERE pitch_number=? AND delivery_date=?',
+                (pitch, ddate)).fetchone()
+            if existing:
+                conn.execute('''UPDATE orders SET
+                    customer_name=?,
+                    francesino=francesino+?, grano_duro=grano_duro+?,
+                    multicereale=multicereale+?,
+                    cornetto_vuoto=cornetto_vuoto+?,
+                    cornetto_marmellata=cornetto_marmellata+?,
+                    cornetto_cioccolato=cornetto_cioccolato+?,
+                    cornetto_crema=cornetto_crema+?,
+                    total_amount=total_amount+?
+                    WHERE id=?''',
+                    (name,
+                     quantities['francesino'],      quantities['grano_duro'],
+                     quantities['multicereale'],    quantities['cornetto_vuoto'],
+                     quantities['cornetto_marmellata'], quantities['cornetto_cioccolato'],
+                     quantities['cornetto_crema'],  total, existing['id']))
+            else:
+                conn.execute('''INSERT INTO orders
+                    (delivery_date, customer_name, pitch_number,
+                     francesino, grano_duro, multicereale,
+                     cornetto_vuoto, cornetto_marmellata,
+                     cornetto_cioccolato, cornetto_crema, total_amount)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?)''',
+                    (ddate, name, pitch,
+                     quantities['francesino'],      quantities['grano_duro'],
+                     quantities['multicereale'],    quantities['cornetto_vuoto'],
+                     quantities['cornetto_marmellata'], quantities['cornetto_cioccolato'],
+                     quantities['cornetto_crema'],  total))
 
     return redirect(url_for('success',
                             name=name, pitch=pitch,
