@@ -11,8 +11,26 @@ from datetime import datetime, timedelta
 import os
 import secrets
 import logging
+from collections import defaultdict
+import time
+import threading
 
 app = Flask(__name__)
+
+# ── Rate limiting (in memoria, reset al riavvio) ────────────────────
+_rate_lock = threading.Lock()
+_rate_hits = defaultdict(list)   # ip -> [timestamp, ...]
+RATE_LIMIT  = 5   # max richieste
+RATE_WINDOW = 60  # secondi
+
+def _is_rate_limited(ip: str) -> bool:
+    now = time.time()
+    with _rate_lock:
+        _rate_hits[ip] = [t for t in _rate_hits[ip] if now - t < RATE_WINDOW]
+        if len(_rate_hits[ip]) >= RATE_LIMIT:
+            return True
+        _rate_hits[ip].append(now)
+        return False
 
 # ── Configuration ────────────────────────────────────────────────────
 # Secret key: usa env var in produzione, altrimenti genera casuale (sessioni invalidate al riavvio)
@@ -140,6 +158,18 @@ def order_form():
 
 @app.route('/submit', methods=['POST'])
 def submit_order():
+    if _is_rate_limited(request.remote_addr):
+        return ('''<!DOCTYPE html><html><head><meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width,initial-scale=1">
+            <title>Troppi ordini</title>
+            <style>body{font-family:sans-serif;text-align:center;padding:60px 20px;
+            background:#FFF8E1}h1{color:#C8880A}p{color:#555;margin:16px 0}
+            a{color:#1B5E3B;font-weight:bold}</style></head>
+            <body><h1>Troppi ordini</h1>
+            <p>Hai inviato troppi ordini. Riprova tra un minuto.</p>
+            <p>Zu viele Bestellungen. Bitte versuchen Sie es in einer Minute erneut.</p>
+            <p><a href="/">Torna / Zurück</a></p></body></html>''', 429)
+
     now = datetime.now()
 
     name   = request.form.get('customer_name', '').strip()
