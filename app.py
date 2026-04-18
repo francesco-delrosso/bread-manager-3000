@@ -121,13 +121,14 @@ def init_db():
 def is_past_cutoff(now: datetime) -> bool:
     return now.hour >= CUTOFF_HOUR
 
-def get_available_dates(now: datetime) -> list:
+def get_available_dates(now: datetime, skip_cutoff: bool = False) -> list:
     """Genera i prossimi 7 giorni consegnabili.
 
     Prima delle 18:00 la prima data disponibile è domani (delta=1).
     Dopo le 18:00 la prima data disponibile è dopodomani (delta=2).
+    Se skip_cutoff=True, inizia sempre da domani (usato dal manager).
     """
-    start = 2 if is_past_cutoff(now) else 1
+    start = 1 if skip_cutoff else (2 if is_past_cutoff(now) else 1)
     dates = []
     for idx, delta in enumerate(range(start, start + 7)):
         d   = (now + timedelta(days=delta)).date()
@@ -283,7 +284,7 @@ def manager_dashboard():
                            totals=totals,
                            grand_total=grand,
                            prices=PRICES,
-                           available_dates=get_available_dates(datetime.now()))
+                           available_dates=get_available_dates(datetime.now(), skip_cutoff=True))
 
 @app.route('/manager/stats')
 def manager_stats():
